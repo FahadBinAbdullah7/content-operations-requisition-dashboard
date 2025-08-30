@@ -10,7 +10,7 @@ export default function Icon() {
       <div
         style={{
           fontSize: 24,
-          background: '#29ABE2',
+          background: '#111212',
           width: '100%',
           height: '100%',
           display: 'flex',
@@ -20,7 +20,7 @@ export default function Icon() {
           borderRadius: '8px'
         }}
       >
-        S
+        Ops
       </div>
     ),
     {
