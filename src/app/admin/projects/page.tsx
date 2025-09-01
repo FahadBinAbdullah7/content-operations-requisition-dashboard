@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -214,7 +213,7 @@ export default function ProjectsPage() {
                                 <TableCell key={cellIndex}>
                                     {cell === 'Yes' ? (
                                         <Button asChild variant="secondary">
-                                            <Link href={`/kanban/${projectId}`}>
+                                            <Link href={`/admin/kanban/${projectId}`}>
                                                <Check className="mr-2" /> View Kanban
                                             </Link>
                                         </Button>
