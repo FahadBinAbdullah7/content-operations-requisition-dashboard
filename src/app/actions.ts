@@ -1,4 +1,3 @@
-
 "use server";
 
 import { intelligentTicketRouting, type IntelligentTicketRoutingInput } from '@/ai/flows/intelligent-ticket-routing';
@@ -41,6 +40,7 @@ export async function getTicketRoutingSuggestion(formData: FormData) {
 export async function submitTicket(data: Record<string, any>) {
     const dataWithTimestamp = {
         ...data,
+        'Ticket ID': `TICKET-${Date.now()}`,
         'Created Date': new Date().toISOString(),
         'Status': 'Open'
     };
@@ -513,11 +513,3 @@ export async function deleteKanbanTask(sheetRowIndex: number) {
         return { success: false, error: 'An unknown error occurred.' };
     }
 }
-
-
-    
-
-    
-
-
-
