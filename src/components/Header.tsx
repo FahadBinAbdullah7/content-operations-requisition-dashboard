@@ -26,7 +26,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
         <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-          <Image src="/logo.png" alt="Content Operations Logo" width="90" height="70" />
+          <Image src="/logo.png" alt="Content Operations Logo" width="100" height="90" />
           <span className="hidden sm:inline-block">Requisition Form Dashboard</span>
         </Link>
         
