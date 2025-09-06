@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -12,8 +11,24 @@ import { Loader2, FolderPlus } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { parseISO, isWithinInterval, startOfDay, endOfDay, format } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
+
+const ClientDate = ({ dateString }: { dateString: string }) => {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+
+    if (!mounted || !dateString) {
+        return <>{dateString}</>;
+    }
+    
+    try {
+        return <>{format(parseISO(dateString), 'yyyy-MM-dd HH:mm')}</>
+    } catch(e) {
+        return <>{dateString}</>;
+    }
+}
+
 
 export default function AllTicketsPage() {
   const { user } = useAuth();
@@ -205,7 +220,7 @@ export default function AllTicketsPage() {
                                 )
                              }
                              if (cellIndex === createdDateIndex) {
-                                return <TableCell key={cellIndex}>{cell ? new Date(cell).toLocaleString() : ''}</TableCell>
+                                return <TableCell key={cellIndex}><ClientDate dateString={cell} /></TableCell>
                              }
                             return <TableCell key={cellIndex}>{cell}</TableCell>
                         })}
