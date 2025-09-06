@@ -277,10 +277,15 @@ export async function createProjectFromTicket(ticketRow: { rowIndex: number, val
         const ticketSheetData = await getSheetData('Sheet1');
         const ticketHeaders = ticketSheetData.values[0];
 
-        const ticketIdIndex = ticketHeaders.findIndex(h => h.toLowerCase().includes('id'));
-        const projectId = ticketRow.values[ticketIdIndex] || `PROJ-${Date.now()}`;
+        const ticketIdIndex = ticketHeaders.findIndex(h => h === 'Ticket ID');
+        if (ticketIdIndex === -1) {
+            return { success: false, error: 'Ticket ID column not found in the source sheet.' };
+        }
+        const ticketId = ticketRow.values[ticketIdIndex];
 
-        const projectHeaders = ['Project ID', 'Start Date', 'End Date', 'Assignee', 'Kanban Initialized', ...ticketHeaders];
+        const projectId = `PROJ-${Date.now()}`;
+
+        const projectHeaders = ['Project ID', 'Ticket ID', 'Start Date', 'End Date', 'Assignee', 'Kanban Initialized', ...ticketHeaders.filter(h => h !== 'Ticket ID')];
 
         // Ensure Sheet3 has headers
         const projectSheetData = await getSheetData('Sheet3');
@@ -290,13 +295,17 @@ export async function createProjectFromTicket(ticketRow: { rowIndex: number, val
 
         const projectData: Record<string, string> = {
             'Project ID': projectId,
+            'Ticket ID': ticketId,
             'Start Date': '',
             'End Date': '',
             'Assignee': '',
             'Kanban Initialized': 'No'
         };
+        
         ticketHeaders.forEach((header, i) => {
-            projectData[header] = ticketRow.values[i] || '';
+            if (header !== 'Ticket ID') {
+                projectData[header] = ticketRow.values[i] || '';
+            }
         });
         
         await appendRow(projectData, 'Sheet3');
