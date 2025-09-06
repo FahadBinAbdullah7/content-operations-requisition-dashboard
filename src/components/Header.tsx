@@ -30,15 +30,15 @@ export default function Header() {
           <span className="hidden sm:inline-block">Requisition Form Dashboard</span>
         </Link>
         
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-          {linksToShow.map((link) => (
-            <Link key={link.href} href={link.href} className="transition-colors hover:text-foreground/80 text-foreground/60">
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-
         <div className="flex items-center gap-4">
+            <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
+            {linksToShow.map((link) => (
+                <Link key={link.href} href={link.href} className="transition-colors hover:text-foreground/80 text-foreground/60">
+                {link.label}
+                </Link>
+            ))}
+            </nav>
+
           {isMounted && (
             user ? (
               <>
