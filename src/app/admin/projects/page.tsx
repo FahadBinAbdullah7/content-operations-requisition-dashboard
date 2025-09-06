@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getProjects, getMembers, updateProject, initializeKanban } from '@/app/actions';
-import { Loader2, Calendar as CalendarIcon, User, KanbanSquare, Check } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, User, KanbanSquare, Check, Search } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/use-auth';
+import { Input } from '@/components/ui/input';
 
 export default function ProjectsPage() {
   const { user } = useAuth();
@@ -24,6 +25,8 @@ export default function ProjectsPage() {
   const [error, setError] = useState('');
   const [selectedProject, setSelectedProject] = useState<{rowIndex: number, values: string[]} | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [projectIdFilter, setProjectIdFilter] = useState('');
+  const [ticketIdFilter, setTicketIdFilter] = useState('');
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -110,11 +113,21 @@ export default function ProjectsPage() {
 
   const canManage = user?.role === 'admin';
   const projectIdIndex = headers.indexOf('Project ID');
+  const ticketIdIndex = headers.indexOf('Ticket ID');
   const startDateIndex = headers.indexOf('Start Date');
   const endDateIndex = headers.indexOf('End Date');
   const assigneeIndex = headers.indexOf('Assignee');
   const kanbanInitializedIndex = headers.indexOf('Kanban Initialized');
   const canCreateKanban = selectedProject && selectedProject.values[kanbanInitializedIndex] !== 'Yes' && canManage;
+  
+  const filteredProjects = projects.filter(project => {
+    const projectId = project[projectIdIndex] || '';
+    const ticketId = project[ticketIdIndex] || '';
+    return (
+        projectId.toLowerCase().includes(projectIdFilter.toLowerCase()) &&
+        ticketId.toLowerCase().includes(ticketIdFilter.toLowerCase())
+    );
+  });
 
   const DatePickerCell = ({ rowIndex, cell, field }: { rowIndex: number; cell: string; field: 'Start Date' | 'End Date' }) => (
     <TableCell>
@@ -152,6 +165,30 @@ export default function ProjectsPage() {
             </Button>
         )}
       </div>
+
+       <Card className="mb-6">
+        <CardContent className="p-4 flex flex-wrap items-center gap-4">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by Project ID..."
+                value={projectIdFilter}
+                onChange={(e) => setProjectIdFilter(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+             <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by Ticket ID..."
+                value={ticketIdFilter}
+                onChange={(e) => setTicketIdFilter(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+        </CardContent>
+       </Card>
+
       <Card>
           <CardHeader>
             <CardTitle>Projects from Google Sheet</CardTitle>
@@ -174,26 +211,26 @@ export default function ProjectsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {projects.map((row, rowIndex) => (
+                {filteredProjects.map((row, rowIndex) => (
                   <TableRow key={rowIndex}>
                     <TableCell>
                         <Checkbox 
-                            checked={selectedProject?.rowIndex === rowIndex}
-                            onCheckedChange={() => handleSelectProject(rowIndex, row)}
+                            checked={selectedProject?.rowIndex === projects.indexOf(row)}
+                            onCheckedChange={() => handleSelectProject(projects.indexOf(row), row)}
                             disabled={!canManage}
                         />
                     </TableCell>
                     {row.map((cell, cellIndex) => {
                        if (cellIndex === startDateIndex) {
-                         return <DatePickerCell key={cellIndex} rowIndex={rowIndex} cell={cell} field="Start Date" />;
+                         return <DatePickerCell key={cellIndex} rowIndex={projects.indexOf(row)} cell={cell} field="Start Date" />;
                        }
                        if (cellIndex === endDateIndex) {
-                        return <DatePickerCell key={cellIndex} rowIndex={rowIndex} cell={cell} field="End Date" />;
+                        return <DatePickerCell key={cellIndex} rowIndex={projects.indexOf(row)} cell={cell} field="End Date" />;
                        }
                        if (cellIndex === assigneeIndex) {
                           return (
                            <TableCell key={cellIndex}>
-                               <Select onValueChange={(value) => handleUpdate(rowIndex, 'Assignee', value)} defaultValue={cell} disabled={!canManage}>
+                               <Select onValueChange={(value) => handleUpdate(projects.indexOf(row), 'Assignee', value)} defaultValue={cell} disabled={!canManage}>
                                 <SelectTrigger className="w-[180px]">
                                     <User className="mr-2 h-4 w-4" />
                                     <SelectValue placeholder="Assign a member" />
