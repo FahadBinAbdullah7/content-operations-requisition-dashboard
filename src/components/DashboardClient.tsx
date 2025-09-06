@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { parseISO, isWithinInterval, startOfDay, endOfDay, format } from 'date-fns';
+import { Search } from 'lucide-react';
 
 interface DashboardClientProps {
     tickets: string[][];
@@ -36,12 +37,22 @@ export function DashboardClient({ tickets, headers, teams, statuses }: Dashboard
   const [toDate, setToDate] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [teamFilter, setTeamFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const createdDateIndex = headers.indexOf('Created Date');
   const statusIndex = headers.indexOf('Status');
   const teamIndex = headers.indexOf('Team');
+  const ticketIdIndex = headers.indexOf('Ticket ID');
+
 
   const filteredTickets = tickets.filter(row => {
+    // Search query filter
+    const matchesSearch = (() => {
+        if (!searchQuery) return true;
+        if (ticketIdIndex === -1) return true;
+        return row[ticketIdIndex]?.toLowerCase().includes(searchQuery.toLowerCase());
+    })();
+
     // Date filter
     const isWithinDate = (() => {
         if (!fromDate && !toDate) return true;
@@ -62,7 +73,7 @@ export function DashboardClient({ tickets, headers, teams, statuses }: Dashboard
     // Team filter
     const hasTeam = teamFilter === 'All' || (teamIndex !== -1 && row[teamIndex] === teamFilter);
 
-    return isWithinDate && hasStatus && hasTeam;
+    return matchesSearch && isWithinDate && hasStatus && hasTeam;
   });
 
   return (
@@ -73,6 +84,15 @@ export function DashboardClient({ tickets, headers, teams, statuses }: Dashboard
       </CardHeader>
       <CardContent>
         <div className="mb-6 p-4 border rounded-lg bg-muted/50 flex flex-wrap items-center gap-4">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by Ticket ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
             <div className="flex items-center gap-2">
                 <Label htmlFor="from-date">From</Label>
                 <Input
