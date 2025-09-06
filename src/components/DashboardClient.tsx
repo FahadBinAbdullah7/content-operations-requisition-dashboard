@@ -1,13 +1,14 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { parseISO, isWithinInterval, startOfDay, endOfDay, format } from 'date-fns';
-import { Search } from 'lucide-react';
+import { Search, Ticket, CheckCircle2, LoaderCircle } from 'lucide-react';
 
 interface DashboardClientProps {
     tickets: string[][];
@@ -76,97 +77,133 @@ export function DashboardClient({ tickets, headers, teams, statuses }: Dashboard
     return matchesSearch && isWithinDate && hasStatus && hasTeam;
   });
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>All Tickets</CardTitle>
-        <CardDescription>Filter and view all submitted tickets.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="mb-6 p-4 border rounded-lg bg-muted/50 flex flex-wrap items-center gap-4">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by Ticket ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-                <Label htmlFor="from-date">From</Label>
-                <Input
-                    id="from-date"
-                    type="date"
-                    value={fromDate}
-                    onChange={(e) => setFromDate(e.target.value)}
-                    className="w-40"
-                />
-            </div>
-            <div className="flex items-center gap-2">
-                <Label htmlFor="to-date">To</Label>
-                <Input
-                    id="to-date"
-                    type="date"
-                    value={toDate}
-                    onChange={(e) => setToDate(e.target.value)}
-                    className="w-40"
-                />
-            </div>
-             <div className="flex items-center gap-2">
-                <Label htmlFor="status-filter">Status</Label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger id="status-filter" className="w-40">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-            </div>
-             <div className="flex items-center gap-2">
-                <Label htmlFor="team-filter">Team</Label>
-                 <Select value={teamFilter} onValueChange={setTeamFilter}>
-                    <SelectTrigger id="team-filter" className="w-40">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {teams.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-            </div>
-        </div>
+  const stats = useMemo(() => {
+    return filteredTickets.reduce((acc, ticket) => {
+        const status = statusIndex !== -1 ? ticket[statusIndex] : '';
+        if (status === 'Done') {
+            acc.solved++;
+        } else if (status === 'In Progress') {
+            acc.inProgress++;
+        }
+        return acc;
+    }, { total: filteredTickets.length, solved: 0, inProgress: 0 });
+  }, [filteredTickets, statusIndex]);
+  
+  const statsCards = [
+    { title: 'Total Tickets', value: stats.total.toString(), icon: <Ticket className="h-7 w-7 text-muted-foreground" /> },
+    { title: 'Tickets Solved', value: stats.solved.toString(), icon: <CheckCircle2 className="h-7 w-7 text-muted-foreground" /> },
+    { title: 'Work In Progress', value: stats.inProgress.toString(), icon: <LoaderCircle className="h-7 w-7 text-muted-foreground" /> },
+  ];
 
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {headers.map((header) => <TableHead key={header}>{header}</TableHead>)}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTickets.length > 0 ? (
-                filteredTickets.map((row, rowIndex) => (
-                  <TableRow key={rowIndex}>
-                    {row.map((cell, cellIndex) => {
-                       if (cellIndex === createdDateIndex) {
-                           return <TableCell key={cellIndex}><ClientDate dateString={cell} /></TableCell>
-                       }
-                       return <TableCell key={cellIndex}>{cell}</TableCell>
-                    })}
-                  </TableRow>
-                ))
-              ) : (
+  return (
+    <>
+      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+
+      <div className="grid gap-6 md:grid-cols-3 mb-8">
+          {statsCards.map((stat) => (
+          <Card key={stat.title}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                  {stat.icon}
+              </CardHeader>
+              <CardContent>
+              <div className="text-2xl font-bold">{stat.value}</div>
+              </CardContent>
+          </Card>
+          ))}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>All Tickets</CardTitle>
+          <CardDescription>Filter and view all submitted tickets.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-6 p-4 border rounded-lg bg-muted/50 flex flex-wrap items-center gap-4">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by Ticket ID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                  <Label htmlFor="from-date">From</Label>
+                  <Input
+                      id="from-date"
+                      type="date"
+                      value={fromDate}
+                      onChange={(e) => setFromDate(e.target.value)}
+                      className="w-40"
+                  />
+              </div>
+              <div className="flex items-center gap-2">
+                  <Label htmlFor="to-date">To</Label>
+                  <Input
+                      id="to-date"
+                      type="date"
+                      value={toDate}
+                      onChange={(e) => setToDate(e.target.value)}
+                      className="w-40"
+                  />
+              </div>
+               <div className="flex items-center gap-2">
+                  <Label htmlFor="status-filter">Status</Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger id="status-filter" className="w-40">
+                          <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
+              </div>
+               <div className="flex items-center gap-2">
+                  <Label htmlFor="team-filter">Team</Label>
+                   <Select value={teamFilter} onValueChange={setTeamFilter}>
+                      <SelectTrigger id="team-filter" className="w-40">
+                          <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {teams.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
+              </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                    <TableCell colSpan={headers.length} className="h-24 text-center">
-                        No tickets found.
-                    </TableCell>
+                  {headers.map((header) => <TableHead key={header}>{header}</TableHead>)}
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+              </TableHeader>
+              <TableBody>
+                {filteredTickets.length > 0 ? (
+                  filteredTickets.map((row, rowIndex) => (
+                    <TableRow key={rowIndex}>
+                      {row.map((cell, cellIndex) => {
+                         if (cellIndex === createdDateIndex) {
+                             return <TableCell key={cellIndex}><ClientDate dateString={cell} /></TableCell>
+                         }
+                         return <TableCell key={cellIndex}>{cell}</TableCell>
+                      })}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                      <TableCell colSpan={headers.length} className="h-24 text-center">
+                          No tickets found.
+                      </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </>
   );
 }
