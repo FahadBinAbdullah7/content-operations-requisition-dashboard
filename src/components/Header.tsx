@@ -2,9 +2,10 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
-import { Menu, LayoutGrid, LogIn, LogOut } from 'lucide-react';
+import { Menu, LogIn, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 
 export default function Header() {
@@ -25,8 +26,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
         <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-          <LayoutGrid className="h-6 w-6 text-primary" />
-          <span className="font-semibold">Requisition Form Dashboard</span>
+          <Image src="/logo.png" alt="Content Operations Logo" width="150" height="35" />
         </Link>
         
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
@@ -74,8 +74,7 @@ export default function Header() {
               <div className="flex h-full flex-col">
                 <div className="flex-1">
                   <Link href="/" className="flex items-center gap-2 text-lg font-semibold mb-4 border-b pb-4">
-                      <LayoutGrid className="h-6 w-6 text-primary" />
-                      <span className="font-semibold">Project Hub</span>
+                      <Image src="/logo.png" alt="Content Operations Logo" width="150" height="35" />
                   </Link>
                   <nav className="grid gap-6 text-lg font-medium mt-8">
                     {linksToShow.map((link) => (
