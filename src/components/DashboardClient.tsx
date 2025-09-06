@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { parseISO, isWithinInterval, startOfDay, endOfDay, format } from 'date-fns';
-import { Search, Ticket, CheckCircle2, LoaderCircle } from 'lucide-react';
+import { Search, Ticket, CheckCircle2, LoaderCircle, X } from 'lucide-react';
+import { Button } from './ui/button';
 
 interface DashboardClientProps {
     tickets: string[][];
@@ -89,28 +90,40 @@ export function DashboardClient({ tickets, headers, teams, statuses }: Dashboard
     }, { total: filteredTickets.length, solved: 0, inProgress: 0 });
   }, [filteredTickets, statusIndex]);
   
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setFromDate('');
+    setToDate('');
+    setStatusFilter('All');
+    setTeamFilter('All');
+  };
+
+  const isAnyFilterActive = searchQuery || fromDate || toDate || statusFilter !== 'All' || teamFilter !== 'All';
+
   const statsCards = [
-    { title: 'Total Tickets', value: stats.total.toString(), icon: <Ticket className="h-7 w-7 text-muted-foreground" /> },
-    { title: 'Tickets Solved', value: stats.solved.toString(), icon: <CheckCircle2 className="h-7 w-7 text-muted-foreground" /> },
-    { title: 'Work In Progress', value: stats.inProgress.toString(), icon: <LoaderCircle className="h-7 w-7 text-muted-foreground" /> },
+    { title: 'Total Tickets', value: stats.total.toString(), icon: <Ticket className="h-8 w-8 text-primary" />, color: "text-primary" },
+    { title: 'Tickets Solved', value: stats.solved.toString(), icon: <CheckCircle2 className="h-8 w-8 text-green-500" />, color: "text-green-500" },
+    { title: 'Work In Progress', value: stats.inProgress.toString(), icon: <LoaderCircle className="h-8 w-8 text-orange-500" />, color: "text-orange-500" },
   ];
 
   return (
     <>
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
 
-      <div className="grid gap-6 md:grid-cols-3 mb-8">
-          {statsCards.map((stat) => (
-          <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                  {stat.icon}
-              </CardHeader>
-              <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              </CardContent>
-          </Card>
-          ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 justify-center">
+        {statsCards.map((stat) => (
+            <Card key={stat.title} className="rounded-xl w-full max-w-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-6 py-8">
+                    <div className="space-y-1">
+                        <CardTitle className="text-base font-medium text-muted-foreground">{stat.title}</CardTitle>
+                        <div className={`text-4xl font-bold transition-colors duration-300 ${stat.color}`}>{stat.value}</div>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                        {stat.icon}
+                    </div>
+                </CardHeader>
+            </Card>
+        ))}
       </div>
 
       <Card>
@@ -171,6 +184,12 @@ export function DashboardClient({ tickets, headers, teams, statuses }: Dashboard
                       </SelectContent>
                   </Select>
               </div>
+              {isAnyFilterActive && (
+                  <Button variant="ghost" onClick={handleClearFilters}>
+                      <X className="mr-2 h-4 w-4" />
+                      Clear Filters
+                  </Button>
+              )}
           </div>
 
           <div className="overflow-x-auto">
