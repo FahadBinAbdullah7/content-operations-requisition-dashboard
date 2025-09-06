@@ -26,7 +26,8 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
         <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-          <Image src="/logo.png" alt="Content Operations Logo" width="150" height="35" />
+          <Image src="/logo.png" alt="Content Operations Logo" width="35" height="35" />
+          <span className="hidden sm:inline-block">Requisition Form Dashboard</span>
         </Link>
         
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
@@ -74,7 +75,8 @@ export default function Header() {
               <div className="flex h-full flex-col">
                 <div className="flex-1">
                   <Link href="/" className="flex items-center gap-2 text-lg font-semibold mb-4 border-b pb-4">
-                      <Image src="/logo.png" alt="Content Operations Logo" width="150" height="35" />
+                      <Image src="/logo.png" alt="Content Operations Logo" width="35" height="35" />
+                      <span>Project Hub</span>
                   </Link>
                   <nav className="grid gap-6 text-lg font-medium mt-8">
                     {linksToShow.map((link) => (
