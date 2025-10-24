@@ -39,7 +39,7 @@ export default function WorkTypesPage() {
       setNewQuestion(data.question);
     } catch (err) {
       console.error(err);
-      setError("Failed to load work types from Google Sheet (Sheet6).");
+      setError("Failed to load work types from Google Sheet (WorkTypes).");
     } finally {
       setIsLoading(false);
     }
@@ -171,7 +171,7 @@ export default function WorkTypesPage() {
       <Card>
         <CardHeader>
           <CardTitle>The Options</CardTitle>
-          <CardDescription>These are the options that appear in the dropdown menu. Managed in Sheet6.</CardDescription>
+          <CardDescription>These are the options that appear in the dropdown menu. Managed in the 'WorkTypes' sheet.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -196,7 +196,7 @@ export default function WorkTypesPage() {
                                 <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
-                                <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the option from Sheet6.</AlertDialogDescription></AlertDialogHeader>
+                                <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the option from the 'WorkTypes' sheet.</AlertDialogDescription></AlertDialogHeader>
                                 <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDeleteOption(option)}>Delete</AlertDialogAction></AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
