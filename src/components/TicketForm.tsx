@@ -142,7 +142,7 @@ const FormFieldBuilder = ({ question, form, team }: { question: FormQuestion, fo
     }
 };
 
-export function TicketForm({ team }: { team: string }) {
+export function TicketForm({ team, workType }: { team: string; workType: string; }) {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formQuestions, setFormQuestions] = useState<FormQuestion[]>([]);
@@ -150,8 +150,8 @@ export function TicketForm({ team }: { team: string }) {
     
     // Dynamically generate the form schema from questions
     const formSchema = z.object({
-        // Add team to the schema to be included in submission
         Team: z.string(),
+        'Work Type': z.string(),
         ...formQuestions.reduce((schema, q) => {
             const isRequired = q.questionText.endsWith('*');
             const questionKey = q.questionText;
@@ -176,6 +176,7 @@ export function TicketForm({ team }: { team: string }) {
         resolver: zodResolver(formSchema),
         defaultValues: {
             Team: team,
+            'Work Type': workType,
         },
     });
 
@@ -197,10 +198,10 @@ export function TicketForm({ team }: { team: string }) {
                 return acc;
             }, {} as Record<string, any>);
             
-            form.reset({ Team: team, ...defaultValues });
+            form.reset({ Team: team, 'Work Type': workType, ...defaultValues });
             setIsLoading(false);
         });
-    }, [team, form]);
+    }, [team, workType, form]);
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true);
@@ -223,8 +224,15 @@ export function TicketForm({ team }: { team: string }) {
                 title: 'Ticket Submitted!',
                 description: 'Your ticket has been submitted successfully.',
             });
-            // Reset with team to keep it selected
-            form.reset({ Team: team });
+            const defaultQuestionValues = formQuestions.reduce((acc, q) => {
+                if (q.questionType === 'Checkbox') {
+                    acc[q.questionText] = {};
+                } else {
+                    acc[q.questionText] = '';
+                }
+                return acc;
+            }, {} as Record<string, any>);
+            form.reset({ Team: team, 'Work Type': workType, ...defaultQuestionValues });
         } else {
             toast({
                 variant: 'destructive',
@@ -264,3 +272,5 @@ export function TicketForm({ team }: { team: string }) {
         </Card>
     );
 }
+
+    
