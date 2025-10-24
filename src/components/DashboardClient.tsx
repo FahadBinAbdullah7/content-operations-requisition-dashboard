@@ -8,8 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { parseISO, isWithinInterval, startOfDay, endOfDay, format } from 'date-fns';
-import { Search, Ticket, CheckCircle2, LoaderCircle, X } from 'lucide-react';
+import { Search, Ticket, CheckCircle2, LoaderCircle, X, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from './ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from './ui/calendar';
+import { cn } from '@/lib/utils';
 
 interface DashboardClientProps {
     tickets: string[][];
@@ -36,8 +39,8 @@ const ClientDate = ({ dateString }: { dateString: string }) => {
 
 
 export function DashboardClient({ tickets, headers, teams, statuses, workTypes }: DashboardClientProps) {
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [fromDate, setFromDate] = useState<Date | undefined>();
+  const [toDate, setToDate] = useState<Date | undefined>();
   const [statusFilter, setStatusFilter] = useState('All');
   const [teamFilter, setTeamFilter] = useState('All');
   const [workTypeFilter, setWorkTypeFilter] = useState('All');
@@ -64,8 +67,8 @@ export function DashboardClient({ tickets, headers, teams, statuses, workTypes }
         if (createdDateIndex === -1) return true;
         try {
             const ticketDate = parseISO(row[createdDateIndex]);
-            const start = fromDate ? startOfDay(parseISO(fromDate)) : new Date(0);
-            const end = toDate ? endOfDay(parseISO(toDate)) : new Date();
+            const start = fromDate ? startOfDay(fromDate) : new Date(0);
+            const end = toDate ? endOfDay(toDate) : new Date();
             return isWithinInterval(ticketDate, { start, end });
         } catch {
             return false;
@@ -98,8 +101,8 @@ export function DashboardClient({ tickets, headers, teams, statuses, workTypes }
   
   const handleClearFilters = () => {
     setSearchQuery('');
-    setFromDate('');
-    setToDate('');
+    setFromDate(undefined);
+    setToDate(undefined);
     setStatusFilter('All');
     setTeamFilter('All');
     setWorkTypeFilter('All');
@@ -112,18 +115,45 @@ export function DashboardClient({ tickets, headers, teams, statuses, workTypes }
     { title: 'Tickets Solved', value: stats.solved.toString(), icon: <CheckCircle2 className="h-8 w-8 text-green-500" />, color: "text-green-500" },
     { title: 'Work In Progress', value: stats.inProgress.toString(), icon: <LoaderCircle className="h-8 w-8 text-orange-500" />, color: "text-orange-500" },
   ];
+  
+  const DatePicker = ({ date, setDate, placeholder }: { date?: Date; setDate: (date?: Date) => void; placeholder: string; }) => (
+    <Popover>
+        <PopoverTrigger asChild>
+            <Button
+                variant={"outline"}
+                className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                )}
+            >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date ? format(date, "PPP") : <span>{placeholder}</span>}
+            </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0">
+            <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                initialFocus
+            />
+        </PopoverContent>
+    </Popover>
+  );
 
   return (
     <>
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 justify-center">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {statsCards.map((stat) => (
-            <Card key={stat.title} className="rounded-xl w-full max-w-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-6 py-8">
+            <Card key={stat.title} className="rounded-xl transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-6">
                     <div className="space-y-1">
                         <CardTitle className="text-base font-medium text-muted-foreground">{stat.title}</CardTitle>
-                        <div className={`text-4xl font-bold transition-colors duration-300 ${stat.color}`}>{stat.value}</div>
+                        <div className={`text-4xl font-bold transition-colors duration-300 ${stat.color}`}>
+                            {stat.value}
+                        </div>
                     </div>
                     <div className="p-3 bg-muted/50 rounded-lg">
                         {stat.icon}
@@ -139,51 +169,23 @@ export function DashboardClient({ tickets, headers, teams, statuses, workTypes }
           <CardDescription>Filter and view all submitted tickets.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-6 p-4 border rounded-lg bg-muted/50 flex flex-wrap items-center gap-4">
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="mb-6 p-4 border rounded-lg bg-muted/50">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
+              <div className="relative">
+                <Label htmlFor="search-id">Search by ID</Label>
+                <Search className="absolute left-3 top-9 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
+                  id="search-id"
                   placeholder="Search by Ticket ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
                 />
               </div>
-              <div className="flex items-center gap-2">
-                  <Label htmlFor="from-date">From</Label>
-                  <Input
-                      id="from-date"
-                      type="date"
-                      value={fromDate}
-                      onChange={(e) => setFromDate(e.target.value)}
-                      className="w-40"
-                  />
-              </div>
-              <div className="flex items-center gap-2">
-                  <Label htmlFor="to-date">To</Label>
-                  <Input
-                      id="to-date"
-                      type="date"
-                      value={toDate}
-                      onChange={(e) => setToDate(e.target.value)}
-                      className="w-40"
-                  />
-              </div>
-               <div className="flex items-center gap-2">
-                  <Label htmlFor="status-filter">Status</Label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger id="status-filter" className="w-40">
-                          <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                          {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                      </SelectContent>
-                  </Select>
-              </div>
-               <div className="flex items-center gap-2">
+               <div>
                   <Label htmlFor="team-filter">Team</Label>
                    <Select value={teamFilter} onValueChange={setTeamFilter}>
-                      <SelectTrigger id="team-filter" className="w-40">
+                      <SelectTrigger id="team-filter">
                           <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -191,10 +193,10 @@ export function DashboardClient({ tickets, headers, teams, statuses, workTypes }
                       </SelectContent>
                   </Select>
               </div>
-              <div className="flex items-center gap-2">
+              <div>
                   <Label htmlFor="work-type-filter">Work Type</Label>
                    <Select value={workTypeFilter} onValueChange={setWorkTypeFilter}>
-                      <SelectTrigger id="work-type-filter" className="w-40">
+                      <SelectTrigger id="work-type-filter">
                           <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -202,12 +204,32 @@ export function DashboardClient({ tickets, headers, teams, statuses, workTypes }
                       </SelectContent>
                   </Select>
               </div>
+               <div>
+                  <Label htmlFor="status-filter">Status</Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger id="status-filter">
+                          <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
+              </div>
+               <div>
+                <Label htmlFor="from-date">From Date</Label>
+                <DatePicker date={fromDate} setDate={setFromDate} placeholder="Pick a start date" />
+              </div>
+              <div>
+                <Label htmlFor="to-date">To Date</Label>
+                <DatePicker date={toDate} setDate={setToDate} placeholder="Pick an end date" />
+              </div>
               {isAnyFilterActive && (
-                  <Button variant="ghost" onClick={handleClearFilters}>
+                  <Button variant="ghost" onClick={handleClearFilters} className="justify-self-start">
                       <X className="mr-2 h-4 w-4" />
                       Clear Filters
                   </Button>
               )}
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -244,3 +266,5 @@ export function DashboardClient({ tickets, headers, teams, statuses, workTypes }
     </>
   );
 }
+
+    
