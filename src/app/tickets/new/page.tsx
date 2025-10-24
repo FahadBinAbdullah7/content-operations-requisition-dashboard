@@ -7,10 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
-import { getWorkTypes } from '@/app/actions';
+import { getWorkTypes, getTeams } from '@/app/actions';
 
 export default function NewTicketPage() {
-  const [teams] = useState<string[]>(["Marketing", "Media", "EPD", "Content"]);
+  const [teams, setTeams] = useState<string[]>([]);
   const [selectedTeam, setSelectedTeam] = useState('');
   const [workTypeInfo, setWorkTypeInfo] = useState<{ question: string; options: string[] }>({ question: '', options: [] });
   const [selectedWorkType, setSelectedWorkType] = useState('');
@@ -20,10 +20,11 @@ export default function NewTicketPage() {
     async function fetchInitialData() {
         setIsLoading(true);
         try {
-            const types = await getWorkTypes();
+            const [types, fetchedTeams] = await Promise.all([getWorkTypes(), getTeams()]);
             setWorkTypeInfo(types);
+            setTeams(fetchedTeams);
         } catch (error) {
-            console.error("Failed to fetch work types", error);
+            console.error("Failed to fetch initial data", error);
         } finally {
             setIsLoading(false);
         }
@@ -79,3 +80,4 @@ export default function NewTicketPage() {
     </div>
   );
 }
+
