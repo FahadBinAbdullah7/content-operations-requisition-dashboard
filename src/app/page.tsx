@@ -1,5 +1,6 @@
 
-import { getAllTickets, getMembers, getWorkTypes } from './actions';
+
+import { getAllTickets, getWorkTypes, getTeams } from './actions';
 import { unstable_noStore as noStore } from 'next/cache';
 import { DashboardClient } from '@/components/DashboardClient';
 
@@ -8,9 +9,9 @@ export const dynamic = 'force-dynamic';
 async function getDashboardData() {
   noStore();
   try {
-    const [ticketData, memberData, workTypesData] = await Promise.all([
+    const [ticketData, teamsData, workTypesData] = await Promise.all([
         getAllTickets(), 
-        getMembers(),
+        getTeams(),
         getWorkTypes()
     ]);
     
@@ -36,15 +37,8 @@ async function getDashboardData() {
         statuses = ['All', ...Array.from(uniqueStatuses)];
     }
     
-    if (memberData && memberData.values && memberData.values.length > 0) {
-        const teamIndex = memberData.values[0].indexOf('Team');
-        if (teamIndex !== -1) {
-            const uniqueTeams = new Set<string>();
-            memberData.values.slice(1).forEach(row => {
-                if (row[teamIndex]) uniqueTeams.add(row[teamIndex]);
-            });
-            teams = ['All', ...Array.from(uniqueTeams)];
-        }
+    if (teamsData && teamsData.length > 0) {
+        teams = ['All', ...teamsData];
     }
     
     if (workTypesData && workTypesData.options.length > 0) {
@@ -84,3 +78,5 @@ export default async function Home() {
     </div>
   );
 }
+
+
