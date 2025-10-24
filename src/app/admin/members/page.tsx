@@ -140,7 +140,7 @@ export default function MembersPage() {
           <CardHeader>
             <CardTitle>Team Members</CardTitle>
             <CardDescription>
-                This list is sourced from Sheet2 in your Google Sheet.
+                This list is sourced from the 'Members' sheet in your Google Sheet.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -172,3 +172,5 @@ export default function MembersPage() {
     </>
   );
 }
+
+    
