@@ -45,7 +45,7 @@ export async function submitTicket(data: Record<string, any>) {
         'Created Date': new Date().toISOString(),
         'Status': 'Open'
     };
-    return await appendRow(dataWithTimestamp, 'Sheet1');
+    return await appendRow(dataWithTimestamp, 'Tickets');
 }
 
 // Inferred question type based on header text
@@ -69,10 +69,10 @@ function inferQuestionType(header: string): { type: FormQuestion['questionType']
 export async function getFormQuestions(team: string): Promise<FormQuestion[]> {
     if (!team) return [];
 
-    const sheetData = await getSheetData('Sheet5');
+    const sheetData = await getSheetData('FormQuestions');
     if (!sheetData.values || sheetData.values.length === 0) {
-        // Initialize Sheet5 with headers if it's empty
-        await appendRow({ 'Team': 'Team', 'QuestionText': 'QuestionText'}, 'Sheet5', true);
+        // Initialize FormQuestions with headers if it's empty
+        await appendRow({ 'Team': 'Team', 'QuestionText': 'QuestionText'}, 'FormQuestions', true);
         return [];
     }
     const headers = sheetData.values[0];
@@ -80,9 +80,9 @@ export async function getFormQuestions(team: string): Promise<FormQuestion[]> {
     const questionTextIndex = headers.indexOf('QuestionText');
 
     if (teamIndex === -1 || questionTextIndex === -1) {
-        // This case indicates Sheet5 is not set up correctly.
+        // This case indicates FormQuestions is not set up correctly.
         // Let's try to set it up.
-        await appendRow({ 'Team': 'Team', 'QuestionText': 'QuestionText'}, 'Sheet5', true);
+        await appendRow({ 'Team': 'Team', 'QuestionText': 'QuestionText'}, 'FormQuestions', true);
         return [];
     }
 
@@ -109,18 +109,18 @@ export async function addFormQuestion(team: string, questionText: string) {
     if (!questionText || !team) {
         return { success: false, error: 'Team and question text cannot be empty.' };
     }
-    return await appendRow({ Team: team, QuestionText: questionText }, 'Sheet5');
+    return await appendRow({ Team: team, QuestionText: questionText }, 'FormQuestions');
 }
 
 async function findQuestionRowIndex(team: string, questionText: string): Promise<number> {
-    const sheetData = await getSheetData('Sheet5');
-    if (!sheetData.values || sheetData.values.length === 0) throw new Error('Sheet5 is empty or not found.');
+    const sheetData = await getSheetData('FormQuestions');
+    if (!sheetData.values || sheetData.values.length === 0) throw new Error('FormQuestions is empty or not found.');
 
     const headers = sheetData.values[0];
     const teamIndex = headers.indexOf('Team');
     const questionTextIndex = headers.indexOf('QuestionText');
 
-    if (teamIndex === -1 || questionTextIndex === -1) throw new Error('Required columns (Team, QuestionText) not found in Sheet5.');
+    if (teamIndex === -1 || questionTextIndex === -1) throw new Error('Required columns (Team, QuestionText) not found in FormQuestions.');
 
     const rowIndex = sheetData.values.findIndex(row => row[teamIndex] === team && row[questionTextIndex] === questionText);
 
@@ -136,8 +136,8 @@ export async function updateFormQuestion(team: string, originalQuestionText: str
     try {
         const rowIndex = await findQuestionRowIndex(team, originalQuestionText);
         
-        const sheetId = await getSheetId('Sheet5');
-        const sheetData = await getSheetData('Sheet5');
+        const sheetId = await getSheetId('FormQuestions');
+        const sheetData = await getSheetData('FormQuestions');
         const headers = sheetData.values[0];
         const questionTextColIndex = headers.indexOf('QuestionText');
         
@@ -166,7 +166,7 @@ export async function updateFormQuestion(team: string, originalQuestionText: str
 export async function deleteFormQuestion(team: string, questionText: string) {
     try {
         const rowIndex = await findQuestionRowIndex(team, questionText);
-        const sheetId = await getSheetId('Sheet5');
+        const sheetId = await getSheetId('FormQuestions');
         
         const deleteRequest = {
             deleteDimension: {
@@ -188,22 +188,22 @@ export async function deleteFormQuestion(team: string, questionText: string) {
 }
 
 export async function getAllTickets() {
-    return await getSheetData('Sheet1');
+    return await getSheetData('Tickets');
 }
 
 export async function updateTicketStatus(rowIndex: number, newStatus: string) {
      try {
-        const ticketSheetData = await getSheetData('Sheet1');
+        const ticketSheetData = await getSheetData('Tickets');
         if (!ticketSheetData.values || ticketSheetData.values.length === 0) {
             return { success: false, error: 'No ticket data found to update.' };
         }
         const headers = ticketSheetData.values[0];
         const statusColIndex = headers.indexOf('Status');
          if (statusColIndex === -1) {
-             return { success: false, error: 'Status column not found in Sheet1.' };
+             return { success: false, error: 'Status column not found in Tickets.' };
          }
          
-        const ticketSheetId = await getSheetId('Sheet1');
+        const ticketSheetId = await getSheetId('Tickets');
 
         const updateRequest = {
             updateCells: {
@@ -229,7 +229,7 @@ export async function updateTicketStatus(rowIndex: number, newStatus: string) {
 
 
 export async function getMembers() {
-    return await getSheetData('Sheet2');
+    return await getSheetData('Members');
 }
 
 export async function addMember(name: string, team: string) {
@@ -238,10 +238,10 @@ export async function addMember(name: string, team: string) {
     }
 
     try {
-        const sheetData = await getSheetData('Sheet2');
+        const sheetData = await getSheetData('Members');
         const headers = sheetData.values?.[0] || ['Name', 'Team'];
         if (!sheetData.values || sheetData.values.length === 0) {
-             await appendRow(Object.fromEntries(headers.map(h => [h, h])), 'Sheet2', true);
+             await appendRow(Object.fromEntries(headers.map(h => [h, h])), 'Members', true);
         }
 
         const teamIndex = headers.indexOf('Team');
@@ -251,7 +251,7 @@ export async function addMember(name: string, team: string) {
         const teamsToAdd = predefinedTeams.filter(t => !existingTeams.has(t));
 
         for (const t of teamsToAdd) {
-            await appendRow({ Name: 'Team Default', Team: t }, 'Sheet2');
+            await appendRow({ Name: 'Team Default', Team: t }, 'Members');
         }
 
         if (name === 'Team Default' && predefinedTeams.includes(team)) {
@@ -259,7 +259,7 @@ export async function addMember(name: string, team: string) {
             return { success: true };
         }
 
-        return await appendRow({ Name: name, Team: team }, 'Sheet2');
+        return await appendRow({ Name: name, Team: team }, 'Members');
 
     } catch (error) {
          console.error('Error adding member:', error);
@@ -270,12 +270,12 @@ export async function addMember(name: string, team: string) {
 
 
 export async function getProjects() {
-    return await getSheetData('Sheet3');
+    return await getSheetData('Projects');
 }
 
 export async function createProjectFromTicket(ticketRow: { rowIndex: number, values: string[] }) {
     try {
-        const ticketSheetData = await getSheetData('Sheet1');
+        const ticketSheetData = await getSheetData('Tickets');
         const ticketHeaders = ticketSheetData.values[0];
 
         const ticketIdIndex = ticketHeaders.findIndex(h => h === 'Ticket ID');
@@ -288,10 +288,10 @@ export async function createProjectFromTicket(ticketRow: { rowIndex: number, val
 
         const projectHeaders = ['Project ID', 'Ticket ID', 'Start Date', 'End Date', 'Assignee', 'Kanban Initialized', ...ticketHeaders.filter(h => h !== 'Ticket ID')];
 
-        // Ensure Sheet3 has headers
-        const projectSheetData = await getSheetData('Sheet3');
+        // Ensure Projects has headers
+        const projectSheetData = await getSheetData('Projects');
         if (!projectSheetData.values || projectSheetData.values.length === 0) {
-            await appendRow(projectHeaders.reduce((acc, h) => ({...acc, [h]: ''}), {}), 'Sheet3', true);
+            await appendRow(projectHeaders.reduce((acc, h) => ({...acc, [h]: ''}), {}), 'Projects', true);
         }
 
         const projectData: Record<string, string> = {
@@ -309,7 +309,7 @@ export async function createProjectFromTicket(ticketRow: { rowIndex: number, val
             }
         });
         
-        await appendRow(projectData, 'Sheet3');
+        await appendRow(projectData, 'Projects');
 
         // Instead of deleting, update the status of the ticket
         await updateTicketStatus(ticketRow.rowIndex, 'In Progress');
@@ -325,7 +325,7 @@ export async function createProjectFromTicket(ticketRow: { rowIndex: number, val
 
 export async function updateProject(rowIndex: number, newValues: { [key: string]: string }) {
     try {
-        const projectSheetData = await getSheetData('Sheet3');
+        const projectSheetData = await getSheetData('Projects');
         if (!projectSheetData.values || projectSheetData.values.length === 0) {
             return { success: false, error: 'No projects found to update.' };
         }
@@ -344,7 +344,7 @@ export async function updateProject(rowIndex: number, newValues: { [key: string]
             }
         });
         
-        const projectSheetId = await getSheetId('Sheet3');
+        const projectSheetId = await getSheetId('Projects');
 
         const updateRequest = {
             updateCells: {
@@ -375,10 +375,10 @@ export async function updateProject(rowIndex: number, newValues: { [key: string]
 
 export async function initializeKanban(rowIndex: number, projectId: string) {
     try {
-        const kanbanSheetData = await getSheetData('Sheet4');
+        const kanbanSheetData = await getSheetData('KanbanTasks');
         if (!kanbanSheetData.values || kanbanSheetData.values.length === 0) {
             const headers = ['Project ID', 'Task ID', 'Title', 'Status', 'Assignee', 'Due Date', 'Description', 'Type', 'Priority', 'Tags'];
-            await appendRow(headers.reduce((acc, h) => ({...acc, [h]: ''}), {}), 'Sheet4', true);
+            await appendRow(headers.reduce((acc, h) => ({...acc, [h]: ''}), {}), 'KanbanTasks', true);
         }
         
         await appendRow({
@@ -392,7 +392,7 @@ export async function initializeKanban(rowIndex: number, projectId: string) {
             'Type': 'Planning',
             'Priority': 'High',
             'Tags': 'kickoff,planning'
-        }, 'Sheet4');
+        }, 'KanbanTasks');
 
         return await updateProject(rowIndex + 1, { 'Kanban Initialized': 'Yes' });
 
@@ -405,7 +405,7 @@ export async function initializeKanban(rowIndex: number, projectId: string) {
 
 export async function getKanbanTasks(projectId: string): Promise<KanbanTask[]> {
     try {
-        const kanbanData = await getSheetData('Sheet4');
+        const kanbanData = await getSheetData('KanbanTasks');
         if (!kanbanData.values || kanbanData.values.length < 1) {
             return [];
         }
@@ -422,7 +422,7 @@ export async function getKanbanTasks(projectId: string): Promise<KanbanTask[]> {
         const tagsIndex = headers.indexOf('Tags');
 
         if (projectIdIndex === -1 || taskIdIndex === -1 || statusIndex === -1) {
-            throw new Error("Required columns (Project ID, Task ID, Status) not found in Sheet4.");
+            throw new Error("Required columns (Project ID, Task ID, Status) not found in KanbanTasks.");
         }
 
         return kanbanData.values
@@ -464,22 +464,22 @@ export async function addKanbanTask(
         'Due Date': taskData.dueDate,
         'Tags': taskData.tags.join(','),
     };
-    return await appendRow(dataToSave, 'Sheet4');
+    return await appendRow(dataToSave, 'KanbanTasks');
 }
 
 export async function updateKanbanTaskStatus(sheetRowIndex: number, newStatus: string) {
      try {
-        const kanbanSheetData = await getSheetData('Sheet4');
+        const kanbanSheetData = await getSheetData('KanbanTasks');
         if (!kanbanSheetData.values || kanbanSheetData.values.length === 0) {
             return { success: false, error: 'No kanban data found to update.' };
         }
         const headers = kanbanSheetData.values[0];
         const statusColIndex = headers.indexOf('Status');
          if (statusColIndex === -1) {
-             return { success: false, error: 'Status column not found in Sheet4.' };
+             return { success: false, error: 'Status column not found in KanbanTasks.' };
          }
          
-        const kanbanSheetId = await getSheetId('Sheet4');
+        const kanbanSheetId = await getSheetId('KanbanTasks');
 
         const updateRequest = {
             updateCells: {
@@ -505,7 +505,7 @@ export async function updateKanbanTaskStatus(sheetRowIndex: number, newStatus: s
 
 export async function deleteKanbanTask(sheetRowIndex: number) {
     try {
-        const kanbanSheetId = await getSheetId('Sheet4');
+        const kanbanSheetId = await getSheetId('KanbanTasks');
         const deleteRequest = {
             deleteDimension: {
                 range: {
@@ -525,7 +525,7 @@ export async function deleteKanbanTask(sheetRowIndex: number) {
 }
 
 export async function getWorkTypes(): Promise<{ question: string; options: string[] }> {
-    const sheetName = 'Sheet6';
+    const sheetName = 'WorkTypes';
     const defaultQuestion = 'What type of work is this?';
     const defaultOptions = ['Urgent', 'Regular'];
 
@@ -559,7 +559,7 @@ export async function getWorkTypes(): Promise<{ question: string; options: strin
 }
     
 export async function addWorkTypeOption(option: string) {
-    const sheetName = 'Sheet6';
+    const sheetName = 'WorkTypes';
     try {
         const sheetData = await getSheetData(sheetName);
         if (!sheetData.values || sheetData.values.length === 0) {
@@ -575,8 +575,8 @@ export async function addWorkTypeOption(option: string) {
 }
 
 async function findWorkTypeRowIndex(option: string): Promise<number> {
-    const sheetData = await getSheetData('Sheet6');
-    if (!sheetData.values || sheetData.values.length === 0) throw new Error('Sheet6 is empty.');
+    const sheetData = await getSheetData('WorkTypes');
+    if (!sheetData.values || sheetData.values.length === 0) throw new Error('WorkTypes is empty.');
     // Start search from row 1 (after header)
     const rowIndex = sheetData.values.slice(1).findIndex(row => row[0] === option);
     if (rowIndex === -1) throw new Error(`Option "${option}" not found.`);
@@ -586,7 +586,7 @@ async function findWorkTypeRowIndex(option: string): Promise<number> {
 export async function updateWorkTypeOption(originalOption: string, newOption: string) {
     try {
         const rowIndex = await findWorkTypeRowIndex(originalOption);
-        const sheetId = await getSheetId('Sheet6');
+        const sheetId = await getSheetId('WorkTypes');
 
         const updateRequest = {
             updateCells: {
@@ -607,7 +607,7 @@ export async function updateWorkTypeOption(originalOption: string, newOption: st
 export async function deleteWorkTypeOption(option: string) {
     try {
         const rowIndex = await findWorkTypeRowIndex(option);
-        const sheetId = await getSheetId('Sheet6');
+        const sheetId = await getSheetId('WorkTypes');
 
         const deleteRequest = {
             deleteDimension: {
@@ -625,7 +625,7 @@ export async function deleteWorkTypeOption(option: string) {
 
 export async function updateWorkTypeQuestion(newQuestion: string) {
     try {
-        const sheetId = await getSheetId('Sheet6');
+        const sheetId = await getSheetId('WorkTypes');
         const updateRequest = {
             updateCells: {
                 range: { sheetId, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 1 },
@@ -649,6 +649,8 @@ export async function updateWorkTypeQuestion(newQuestion: string) {
     
 
 
+
+    
 
     
 
