@@ -104,6 +104,29 @@ export async function getFormQuestions(team: string): Promise<FormQuestion[]> {
     return teamQuestions;
 }
 
+export async function getTeams(): Promise<string[]> {
+    const sheetData = await getSheetData('FormQuestions');
+    if (!sheetData.values || sheetData.values.length <= 1) {
+        return [];
+    }
+    const headers = sheetData.values[0];
+    const teamIndex = headers.indexOf('Team');
+    if (teamIndex === -1) {
+        return [];
+    }
+    const teams = new Set(sheetData.values.slice(1).map(row => row[teamIndex]));
+    return Array.from(teams);
+}
+
+export async function addTeam(teamName: string) {
+    // A new team is implicitly created by adding a question for it.
+    // We can add a dummy entry to make it appear in the list, 
+    // which will be overwritten when a real question is added.
+    // Or we can just let addFormQuestion handle it.
+    // Let's add a placeholder to ensure it appears in the list.
+    return addFormQuestion(teamName, "Default placeholder question (can be deleted)");
+}
+
 
 export async function addFormQuestion(team: string, questionText: string) {
     if (!questionText || !team) {
