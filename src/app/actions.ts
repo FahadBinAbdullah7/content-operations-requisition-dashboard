@@ -1,3 +1,4 @@
+
 "use server";
 
 import { intelligentTicketRouting, type IntelligentTicketRoutingInput } from '@/ai/flows/intelligent-ticket-routing';
@@ -522,3 +523,135 @@ export async function deleteKanbanTask(sheetRowIndex: number) {
         return { success: false, error: 'An unknown error occurred.' };
     }
 }
+
+export async function getWorkTypes(): Promise<{ question: string; options: string[] }> {
+    const sheetName = 'Sheet6';
+    const defaultQuestion = 'What type of work is this?';
+    const defaultOptions = ['Urgent', 'Regular'];
+
+    try {
+        let sheetData = await getSheetData(sheetName);
+
+        if (!sheetData.values || sheetData.values.length === 0) {
+            const header = { [defaultQuestion]: defaultQuestion };
+            await appendRow(header, sheetName, true);
+            
+            for (const type of defaultOptions) {
+                await appendRow({ [defaultQuestion]: type }, sheetName);
+            }
+            
+            sheetData = await getSheetData(sheetName);
+        }
+
+        if (!sheetData.values || sheetData.values.length < 1) {
+             throw new Error("Work types sheet is not configured correctly.");
+        }
+
+        const question = sheetData.values[0][0] || defaultQuestion;
+        const options = sheetData.values.slice(1).map(row => row[0]).filter(Boolean);
+        
+        return { question, options };
+
+    } catch (error) {
+        console.error("Error in getWorkTypes:", error);
+        return { question: defaultQuestion, options: defaultOptions };
+    }
+}
+    
+export async function addWorkTypeOption(option: string) {
+    const sheetName = 'Sheet6';
+    try {
+        const sheetData = await getSheetData(sheetName);
+        if (!sheetData.values || sheetData.values.length === 0) {
+            return { success: false, error: 'Work types sheet not found or is empty.' };
+        }
+        const header = sheetData.values[0][0];
+        return await appendRow({ [header]: option }, sheetName);
+    } catch (error) {
+        console.error('Error adding work type option:', error);
+        if (error instanceof Error) return { success: false, error: error.message };
+        return { success: false, error: 'An unknown error occurred.' };
+    }
+}
+
+async function findWorkTypeRowIndex(option: string): Promise<number> {
+    const sheetData = await getSheetData('Sheet6');
+    if (!sheetData.values || sheetData.values.length === 0) throw new Error('Sheet6 is empty.');
+    // Start search from row 1 (after header)
+    const rowIndex = sheetData.values.slice(1).findIndex(row => row[0] === option);
+    if (rowIndex === -1) throw new Error(`Option "${option}" not found.`);
+    return rowIndex + 1; // Return the actual sheet row index (1-based)
+}
+
+export async function updateWorkTypeOption(originalOption: string, newOption: string) {
+    try {
+        const rowIndex = await findWorkTypeRowIndex(originalOption);
+        const sheetId = await getSheetId('Sheet6');
+
+        const updateRequest = {
+            updateCells: {
+                range: { sheetId, startRowIndex: rowIndex, endRowIndex: rowIndex + 1, startColumnIndex: 0, endColumnIndex: 1 },
+                rows: [{ values: [{ userEnteredValue: { stringValue: newOption } }] }],
+                fields: 'userEnteredValue.stringValue'
+            }
+        };
+
+        return await batchUpdateSheet([updateRequest]);
+    } catch (error) {
+        console.error('Error updating work type option:', error);
+        if (error instanceof Error) return { success: false, error: error.message };
+        return { success: false, error: 'An unknown error occurred.' };
+    }
+}
+
+export async function deleteWorkTypeOption(option: string) {
+    try {
+        const rowIndex = await findWorkTypeRowIndex(option);
+        const sheetId = await getSheetId('Sheet6');
+
+        const deleteRequest = {
+            deleteDimension: {
+                range: { sheetId, dimension: "ROWS", startIndex: rowIndex, endIndex: rowIndex + 1 }
+            }
+        };
+
+        return await batchUpdateSheet([deleteRequest]);
+    } catch (error) {
+        console.error('Error deleting work type option:', error);
+        if (error instanceof Error) return { success: false, error: error.message };
+        return { success: false, error: 'An unknown error occurred.' };
+    }
+}
+
+export async function updateWorkTypeQuestion(newQuestion: string) {
+    try {
+        const sheetId = await getSheetId('Sheet6');
+        const updateRequest = {
+            updateCells: {
+                range: { sheetId, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 1 },
+                rows: [{ values: [{ userEnteredValue: { stringValue: newQuestion } }] }],
+                fields: 'userEnteredValue.stringValue'
+            }
+        };
+        return await batchUpdateSheet([updateRequest]);
+    } catch (error) {
+        console.error('Error updating work type question:', error);
+        if (error instanceof Error) return { success: false, error: error.message };
+        return { success: false, error: 'An unknown error occurred.' };
+    }
+}
+    
+
+
+
+
+
+    
+
+
+
+    
+
+    
+
+    
