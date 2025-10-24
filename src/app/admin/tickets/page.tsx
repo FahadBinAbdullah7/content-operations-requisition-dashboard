@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -172,7 +173,7 @@ export default function AllTicketsPage() {
           <CardHeader>
             <CardTitle>Tickets from Google Sheet</CardTitle>
             <CardDescription>
-                This is a live view of all the tickets submitted through the form. Select one to create a project.
+                This is a live view of all the tickets submitted through the form, from the 'Tickets' sheet. Select one to create a project.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -235,3 +236,5 @@ export default function AllTicketsPage() {
     </div>
   );
 }
+
+    
