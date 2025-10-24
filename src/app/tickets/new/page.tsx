@@ -7,11 +7,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { getWorkTypes } from '@/app/actions';
 
 export default function NewTicketPage() {
-  const [teams, setTeams] = useState<string[]>(["Marketing", "Media", "EPD", "Content"]);
+  const [teams] = useState<string[]>(["Marketing", "Media", "EPD", "Content"]);
   const [selectedTeam, setSelectedTeam] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [workTypeInfo, setWorkTypeInfo] = useState<{ question: string; options: string[] }>({ question: '', options: [] });
+  const [selectedWorkType, setSelectedWorkType] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchInitialData() {
+        setIsLoading(true);
+        try {
+            const types = await getWorkTypes();
+            setWorkTypeInfo(types);
+        } catch (error) {
+            console.error("Failed to fetch work types", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+    fetchInitialData();
+  }, []);
 
   return (
     <div className="container mx-auto max-w-2xl py-8 px-4 md:px-6">
@@ -21,21 +39,34 @@ export default function NewTicketPage() {
       </div>
 
       <Card className="mb-6">
-        <CardContent className="p-6">
+        <CardContent className="p-6 space-y-4">
           <div className="space-y-2">
              <Label htmlFor="team-select">Select Your Team/Department</Label>
+             <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                <SelectTrigger id="team-select" className="w-full">
+                    <SelectValue placeholder="Which team/department are you creating a ticket for?" />
+                </SelectTrigger>
+                <SelectContent>
+                    {teams.map(team => (
+                        <SelectItem key={team} value={team}>{team}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+             <Label htmlFor="work-type-select">{workTypeInfo.question || 'Work Type'}</Label>
              {isLoading ? (
                 <div className="flex items-center text-sm text-muted-foreground">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading...
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading work types...
                 </div>
              ) : (
-                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                    <SelectTrigger id="team-select" className="w-full">
-                        <SelectValue placeholder="Which team/department are you creating a ticket for?" />
+                <Select value={selectedWorkType} onValueChange={setSelectedWorkType}>
+                    <SelectTrigger id="work-type-select" className="w-full">
+                        <SelectValue placeholder="Select the type of work" />
                     </SelectTrigger>
                     <SelectContent>
-                        {teams.map(team => (
-                            <SelectItem key={team} value={team}>{team}</SelectItem>
+                        {workTypeInfo.options.map(type => (
+                            <SelectItem key={type} value={type}>{type}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
@@ -44,7 +75,7 @@ export default function NewTicketPage() {
         </CardContent>
       </Card>
       
-      {selectedTeam && <TicketForm team={selectedTeam} />}
+      {selectedTeam && selectedWorkType && <TicketForm team={selectedTeam} workType={selectedWorkType} />}
     </div>
   );
 }
