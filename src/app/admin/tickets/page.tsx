@@ -8,12 +8,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getAllTickets, createProjectFromTicket, updateTicketStatus } from '@/app/actions';
-import { Loader2, FolderPlus } from 'lucide-react';
+import { Loader2, FolderPlus, Calendar as CalendarIcon } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { parseISO, isWithinInterval, startOfDay, endOfDay, format } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+
 
 const ClientDate = ({ dateString }: { dateString: string }) => {
     const [mounted, setMounted] = useState(false);
@@ -39,8 +43,8 @@ export default function AllTicketsPage() {
   const [error, setError] = useState('');
   const [selectedTicket, setSelectedTicket] = useState<{rowIndex: number, values: string[]} | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [fromDate, setFromDate] = useState<Date | undefined>();
+  const [toDate, setToDate] = useState<Date | undefined>();
   const { toast } = useToast();
 
   const fetchTickets = async () => {
@@ -126,13 +130,38 @@ export default function AllTicketsPage() {
 
     try {
         const ticketDate = parseISO(row[createdDateIndex]);
-        const start = fromDate ? startOfDay(parseISO(fromDate)) : new Date(0);
-        const end = toDate ? endOfDay(parseISO(toDate)) : new Date();
+        const start = fromDate ? startOfDay(fromDate) : new Date(0);
+        const end = toDate ? endOfDay(toDate) : new Date();
         return isWithinInterval(ticketDate, { start, end });
     } catch {
         return false;
     }
   });
+
+  const DatePicker = ({ date, setDate, placeholder }: { date?: Date; setDate: (date?: Date) => void; placeholder: string; }) => (
+    <Popover>
+        <PopoverTrigger asChild>
+            <Button
+                variant={"outline"}
+                className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                )}
+            >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date ? format(date, "PPP") : <span>{placeholder}</span>}
+            </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0">
+            <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                initialFocus
+            />
+        </PopoverContent>
+    </Popover>
+  );
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
@@ -146,26 +175,14 @@ export default function AllTicketsPage() {
         )}
       </div>
        <Card className="mb-6">
-        <CardContent className="p-4 flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
+        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
                 <Label htmlFor="from-date">From</Label>
-                <Input
-                    id="from-date"
-                    type="date"
-                    value={fromDate}
-                    onChange={(e) => setFromDate(e.target.value)}
-                    className="w-40"
-                />
+                <DatePicker date={fromDate} setDate={setFromDate} placeholder="Pick a start date" />
             </div>
-            <div className="flex items-center gap-2">
+            <div>
                 <Label htmlFor="to-date">To</Label>
-                <Input
-                    id="to-date"
-                    type="date"
-                    value={toDate}
-                    onChange={(e) => setToDate(e.target.value)}
-                    className="w-40"
-                />
+                <DatePicker date={toDate} setDate={setToDate} placeholder="Pick an end date" />
             </div>
         </CardContent>
        </Card>
@@ -207,6 +224,7 @@ export default function AllTicketsPage() {
                                         <Select
                                             defaultValue={cell}
                                             onValueChange={(newStatus) => handleStatusChange(rowIndex, newStatus)}
+                                            disabled={!canManage}
                                         >
                                             <SelectTrigger className="w-[150px]">
                                                 <SelectValue />
@@ -236,5 +254,3 @@ export default function AllTicketsPage() {
     </div>
   );
 }
-
-    
