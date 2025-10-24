@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 
 const adminNavLinks = [
   { href: '/admin', label: 'Form Management' },
-    { href: '/admin/work-types', label: 'Work Types' },
+  { href: '/admin/work-types', label: 'Work Types' },
   { href: '/admin/members', label: 'Manage Members' },
   { href: '/admin/tickets', label: 'All Tickets' },
   { href: '/admin/projects', label: 'Projects' },
@@ -63,3 +63,5 @@ export default function AdminLayout({
     </div>
   );
 }
+
+    
