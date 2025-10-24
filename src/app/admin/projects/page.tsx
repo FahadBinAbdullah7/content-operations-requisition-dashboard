@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -193,7 +194,7 @@ export default function ProjectsPage() {
           <CardHeader>
             <CardTitle>Projects from Google Sheet</CardTitle>
             <CardDescription>
-                These projects were created from tickets and are stored in Sheet3. Select one to create a Kanban board.
+                These projects were created from tickets and are stored in the 'Projects' sheet. Select one to create a Kanban board.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -273,3 +274,5 @@ export default function ProjectsPage() {
     </div>
   );
 }
+
+    
