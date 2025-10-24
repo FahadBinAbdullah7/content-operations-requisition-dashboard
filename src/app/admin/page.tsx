@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { getFormQuestions, addFormQuestion, updateFormQuestion, deleteFormQuestion } from '../actions';
+import { getFormQuestions, addFormQuestion, updateFormQuestion, deleteFormQuestion, getTeams, addTeam } from '../actions';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, PlusCircle, Trash2, Edit } from 'lucide-react';
 import type { FormQuestion } from '@/lib/mock-data';
@@ -21,26 +21,45 @@ import { useAuth } from '@/hooks/use-auth';
 export default function AdminPage() {
   const { user } = useAuth();
   
-  const [teams] = useState<string[]>(["Marketing", "Media", "EPD", "Content"]);
+  const [teams, setTeams] = useState<string[]>([]);
   const [selectedTeam, setSelectedTeam] = useState('');
   
   const [formQuestions, setFormQuestions] = useState<FormQuestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingTeams, setIsLoadingTeams] = useState(true);
   const [error, setError] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const [isQuestionDialogOpen, setIsQuestionDialogOpen] = useState(false);
+  const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const [editingQuestion, setEditingQuestion] = useState<FormQuestion | null>(null);
   const [newQuestionText, setNewQuestionText] = useState('');
   const [newQuestionType, setNewQuestionType] = useState<FormQuestion['questionType']>('Text');
   const [isQuestionRequired, setIsQuestionRequired] = useState(false);
   const [checkboxOptions, setCheckboxOptions] = useState('');
+  const [newTeamName, setNewTeamName] = useState('');
   
   const { toast } = useToast();
 
+  const fetchTeams = async () => {
+    setIsLoadingTeams(true);
+    try {
+        const fetchedTeams = await getTeams();
+        setTeams(fetchedTeams);
+        if (fetchedTeams.length > 0 && !selectedTeam) {
+            setSelectedTeam(fetchedTeams[0]);
+        }
+    } catch(err) {
+        console.error(err);
+        setError("Failed to load teams.");
+    } finally {
+        setIsLoadingTeams(false);
+    }
+  }
+
   useEffect(() => {
-      if (teams.length > 0) {
-        setSelectedTeam(teams[0]);
-      }
+    fetchTeams();
   }, []);
 
 
@@ -68,7 +87,7 @@ export default function AdminPage() {
     }
   }, [selectedTeam]);
   
-  const handleOpenDialog = (question: FormQuestion | null = null) => {
+  const handleOpenQuestionDialog = (question: FormQuestion | null = null) => {
     setEditingQuestion(question);
     if (question) {
         setNewQuestionText(question.questionText.replace(/\*$/, '').replace(/\s\(.*\)/, ''));
@@ -81,10 +100,10 @@ export default function AdminPage() {
         setIsQuestionRequired(false);
         setCheckboxOptions('');
     }
-    setIsDialogOpen(true);
+    setIsQuestionDialogOpen(true);
   }
 
-  const handleFormSubmit = async (e: FormEvent) => {
+  const handleQuestionFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
@@ -114,7 +133,7 @@ export default function AdminPage() {
         title: 'Success!',
         description: `Question has been ${editingQuestion ? 'updated' : 'added'}.`,
       });
-      setIsDialogOpen(false);
+      setIsQuestionDialogOpen(false);
       await fetchQuestions(selectedTeam);
     } else {
       toast({
@@ -125,6 +144,33 @@ export default function AdminPage() {
     }
     setIsSubmitting(false);
   };
+  
+  const handleTeamFormSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newTeamName.trim()) {
+        toast({ variant: 'destructive', title: 'Error', description: "Team name cannot be empty." });
+        return;
+    }
+    setIsSubmitting(true);
+    const result = await addTeam(newTeamName.trim());
+     if (result.success) {
+      toast({
+        title: 'Success!',
+        description: `Team "${newTeamName}" has been created.`,
+      });
+      setIsTeamDialogOpen(false);
+      setNewTeamName('');
+      await fetchTeams();
+      setSelectedTeam(newTeamName.trim());
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: result.error || 'An unknown error occurred.',
+      });
+    }
+    setIsSubmitting(false);
+  }
 
   const handleDelete = async (questionText: string) => {
     const result = await deleteFormQuestion(selectedTeam, questionText);
@@ -151,95 +197,131 @@ export default function AdminPage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">Manage Form Questions</h1>
            {canManage && (
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => handleOpenDialog()} disabled={!selectedTeam}>
-                  <PlusCircle className="mr-2" />
-                  Add New Question
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editingQuestion ? 'Edit' : 'Add New'} Form Question for {selectedTeam}</DialogTitle>
-                  <DialogDescription>
-                    This will {editingQuestion ? 'modify an entry in' : 'add a new row to'} the 'FormQuestions' sheet in your Google Sheet.
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleFormSubmit}>
-                  <div className="py-4 space-y-4">
-                    <div>
-                      <Label htmlFor="new-question-text">Question Text</Label>
-                      <Input
-                        id="new-question-text"
-                        value={newQuestionText}
-                        onChange={(e) => setNewQuestionText(e.target.value)}
-                        placeholder="e.g., Contact Number"
-                      />
-                    </div>
-                      <div>
-                      <Label htmlFor="new-question-type">Question Type</Label>
-                        <Select value={newQuestionType} onValueChange={(value) => setNewQuestionType(value as FormQuestion['questionType'])}>
-                          <SelectTrigger id="new-question-type">
-                              <SelectValue placeholder="Select a type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                              <SelectItem value="Text">Text</SelectItem>
-                              <SelectItem value="Textarea">Textarea</SelectItem>
-                              <SelectItem value="Select">Select (Options managed in sheet)</SelectItem>
-                              <SelectItem value="Checkbox">Checkbox (Options defined here)</SelectItem>
-                              <SelectItem value="Date">Date</SelectItem>
-                              <SelectItem value="Url">URL</SelectItem>
-                          </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground mt-1">For 'Select', add options in a new sheet named after the question.</p>
-                    </div>
-                      {newQuestionType === 'Checkbox' && (
+             <div className="flex gap-2">
+                <Dialog open={isTeamDialogOpen} onOpenChange={setIsTeamDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">
+                      <PlusCircle className="mr-2" /> Add Team
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Team</DialogTitle>
+                    </DialogHeader>
+                     <form onSubmit={handleTeamFormSubmit}>
+                        <div className="py-4">
+                            <Label htmlFor="new-team-name">Team Name</Label>
+                            <Input 
+                                id="new-team-name"
+                                value={newTeamName}
+                                onChange={(e) => setNewTeamName(e.target.value)}
+                                placeholder="e.g., Engineering"
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="ghost" onClick={() => setIsTeamDialogOpen(false)}>Cancel</Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Add Team
+                            </Button>
+                        </DialogFooter>
+                     </form>
+                  </DialogContent>
+                </Dialog>
+                <Dialog open={isQuestionDialogOpen} onOpenChange={setIsQuestionDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => handleOpenQuestionDialog()} disabled={!selectedTeam}>
+                      <PlusCircle className="mr-2" />
+                      Add New Question
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{editingQuestion ? 'Edit' : 'Add New'} Form Question for {selectedTeam}</DialogTitle>
+                      <DialogDescription>
+                        This will {editingQuestion ? 'modify an entry in' : 'add a new row to'} the 'FormQuestions' sheet in your Google Sheet.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleQuestionFormSubmit}>
+                      <div className="py-4 space-y-4">
                         <div>
-                          <Label htmlFor="checkbox-options">Checkbox Options</Label>
-                          <Textarea 
-                              id="checkbox-options"
-                              value={checkboxOptions}
-                              onChange={(e) => setCheckboxOptions(e.target.value)}
-                              placeholder="Enter comma-separated options, e.g., Option A, Option B"
+                          <Label htmlFor="new-question-text">Question Text</Label>
+                          <Input
+                            id="new-question-text"
+                            value={newQuestionText}
+                            onChange={(e) => setNewQuestionText(e.target.value)}
+                            placeholder="e.g., Contact Number"
                           />
                         </div>
-                      )}
-                      <div className="flex items-center space-x-2">
-                          <Checkbox id="is-required" checked={isQuestionRequired} onCheckedChange={(checked) => setIsQuestionRequired(Boolean(checked))} />
-                          <label
-                              htmlFor="is-required"
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                              Make this question required
-                          </label>
+                          <div>
+                          <Label htmlFor="new-question-type">Question Type</Label>
+                            <Select value={newQuestionType} onValueChange={(value) => setNewQuestionType(value as FormQuestion['questionType'])}>
+                              <SelectTrigger id="new-question-type">
+                                  <SelectValue placeholder="Select a type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="Text">Text</SelectItem>
+                                  <SelectItem value="Textarea">Textarea</SelectItem>
+                                  <SelectItem value="Select">Select (Options managed in sheet)</SelectItem>
+                                  <SelectItem value="Checkbox">Checkbox (Options defined here)</SelectItem>
+                                  <SelectItem value="Date">Date</SelectItem>
+                                  <SelectItem value="Url">URL</SelectItem>
+                              </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground mt-1">For 'Select', add options in a new sheet named after the question.</p>
+                        </div>
+                          {newQuestionType === 'Checkbox' && (
+                            <div>
+                              <Label htmlFor="checkbox-options">Checkbox Options</Label>
+                              <Textarea 
+                                  id="checkbox-options"
+                                  value={checkboxOptions}
+                                  onChange={(e) => setCheckboxOptions(e.target.value)}
+                                  placeholder="Enter comma-separated options, e.g., Option A, Option B"
+                              />
+                            </div>
+                          )}
+                          <div className="flex items-center space-x-2">
+                              <Checkbox id="is-required" checked={isQuestionRequired} onCheckedChange={(checked) => setIsQuestionRequired(Boolean(checked))} />
+                              <label
+                                  htmlFor="is-required"
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                              >
+                                  Make this question required
+                              </label>
+                          </div>
                       </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {editingQuestion ? 'Save Changes' : 'Add Question'}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+                      <DialogFooter>
+                        <Button type="button" variant="ghost" onClick={() => setIsQuestionDialogOpen(false)}>Cancel</Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          {editingQuestion ? 'Save Changes' : 'Add Question'}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+             </div>
            )}
         </div>
 
         <Card className="mb-6">
             <CardContent className="p-4">
                  <Label htmlFor="team-select">Select Team to Manage Questions</Label>
-                 <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                    <SelectTrigger id="team-select">
-                        <SelectValue placeholder="Select a team..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {teams.map(team => (
-                            <SelectItem key={team} value={team}>{team}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                 {isLoadingTeams ? (
+                     <div className="flex items-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading teams...</div>
+                 ) : (
+                    <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                        <SelectTrigger id="team-select">
+                            <SelectValue placeholder="Select a team..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {teams.map(team => (
+                                <SelectItem key={team} value={team}>{team}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                 )}
             </CardContent>
         </Card>
 
@@ -278,7 +360,7 @@ export default function AdminPage() {
                     <TableCell className="text-right">
                         {canManage ? (
                           <>
-                            <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(question)}>
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenQuestionDialog(question)}>
                               <Edit className="h-4 w-4" />
                             </Button>
                             <AlertDialog>
