@@ -1,5 +1,5 @@
 
-import { getAllTickets, getMembers } from './actions';
+import { getAllTickets, getMembers, getWorkTypes } from './actions';
 import { unstable_noStore as noStore } from 'next/cache';
 import { DashboardClient } from '@/components/DashboardClient';
 
@@ -8,12 +8,17 @@ export const dynamic = 'force-dynamic';
 async function getDashboardData() {
   noStore();
   try {
-    const [ticketData, memberData] = await Promise.all([getAllTickets(), getMembers()]);
+    const [ticketData, memberData, workTypesData] = await Promise.all([
+        getAllTickets(), 
+        getMembers(),
+        getWorkTypes()
+    ]);
     
     let tickets: string[][] = [];
     let ticketHeaders: string[] = [];
     let teams: string[] = [];
     let statuses: string[] = [];
+    let workTypes: string[] = [];
 
     if (ticketData.values && ticketData.values.length > 0) {
         ticketHeaders = ticketData.values[0];
@@ -41,22 +46,27 @@ async function getDashboardData() {
             teams = ['All', ...Array.from(uniqueTeams)];
         }
     }
+    
+    if (workTypesData && workTypesData.options.length > 0) {
+        workTypes = ['All', ...workTypesData.options];
+    }
 
 
-    return { tickets, ticketHeaders, teams, statuses };
+    return { tickets, ticketHeaders, teams, statuses, workTypes };
   } catch (error) {
     console.error("Failed to fetch dashboard data:", error);
     return { 
         tickets: [],
         ticketHeaders: [],
         teams: ['All'],
-        statuses: ['All']
+        statuses: ['All'],
+        workTypes: ['All']
     };
   }
 }
 
 export default async function Home() {
-  const { tickets, ticketHeaders, teams, statuses } = await getDashboardData();
+  const { tickets, ticketHeaders, teams, statuses, workTypes } = await getDashboardData();
 
   return (
     <div className="bg-background flex-1">
@@ -67,6 +77,7 @@ export default async function Home() {
                     headers={ticketHeaders}
                     teams={teams}
                     statuses={statuses}
+                    workTypes={workTypes}
                 />
             </div>
         </main>
