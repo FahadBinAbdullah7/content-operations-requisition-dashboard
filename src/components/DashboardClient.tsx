@@ -16,6 +16,7 @@ interface DashboardClientProps {
     headers: string[];
     teams: string[];
     statuses: string[];
+    workTypes: string[];
 }
 
 const ClientDate = ({ dateString }: { dateString: string }) => {
@@ -34,20 +35,22 @@ const ClientDate = ({ dateString }: { dateString: string }) => {
 }
 
 
-export function DashboardClient({ tickets, headers, teams, statuses }: DashboardClientProps) {
+export function DashboardClient({ tickets, headers, teams, statuses, workTypes }: DashboardClientProps) {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [teamFilter, setTeamFilter] = useState('All');
+  const [workTypeFilter, setWorkTypeFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
   const createdDateIndex = headers.indexOf('Created Date');
   const statusIndex = headers.indexOf('Status');
   const teamIndex = headers.indexOf('Team');
   const ticketIdIndex = headers.indexOf('Ticket ID');
+  const workTypeIndex = headers.indexOf('Work Type');
 
 
-  const filteredTickets = tickets.filter(row => {
+  const filteredTickets = useMemo(() => tickets.filter(row => {
     // Search query filter
     const matchesSearch = (() => {
         if (!searchQuery) return true;
@@ -74,9 +77,12 @@ export function DashboardClient({ tickets, headers, teams, statuses }: Dashboard
 
     // Team filter
     const hasTeam = teamFilter === 'All' || (teamIndex !== -1 && row[teamIndex] === teamFilter);
+    
+    // Work Type filter
+    const hasWorkType = workTypeFilter === 'All' || (workTypeIndex !== -1 && row[workTypeIndex] === workTypeFilter);
 
-    return matchesSearch && isWithinDate && hasStatus && hasTeam;
-  });
+    return matchesSearch && isWithinDate && hasStatus && hasTeam && hasWorkType;
+  }), [tickets, searchQuery, fromDate, toDate, statusFilter, teamFilter, workTypeFilter, ticketIdIndex, createdDateIndex, statusIndex, teamIndex, workTypeIndex]);
 
   const stats = useMemo(() => {
     return filteredTickets.reduce((acc, ticket) => {
@@ -96,9 +102,10 @@ export function DashboardClient({ tickets, headers, teams, statuses }: Dashboard
     setToDate('');
     setStatusFilter('All');
     setTeamFilter('All');
+    setWorkTypeFilter('All');
   };
 
-  const isAnyFilterActive = searchQuery || fromDate || toDate || statusFilter !== 'All' || teamFilter !== 'All';
+  const isAnyFilterActive = searchQuery || fromDate || toDate || statusFilter !== 'All' || teamFilter !== 'All' || workTypeFilter !== 'All';
 
   const statsCards = [
     { title: 'Total Tickets', value: stats.total.toString(), icon: <Ticket className="h-8 w-8 text-primary" />, color: "text-primary" },
@@ -181,6 +188,17 @@ export function DashboardClient({ tickets, headers, teams, statuses }: Dashboard
                       </SelectTrigger>
                       <SelectContent>
                           {teams.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                  <Label htmlFor="work-type-filter">Work Type</Label>
+                   <Select value={workTypeFilter} onValueChange={setWorkTypeFilter}>
+                      <SelectTrigger id="work-type-filter" className="w-40">
+                          <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {workTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                       </SelectContent>
                   </Select>
               </div>
