@@ -162,7 +162,7 @@ export default function AdminPage() {
                 <DialogHeader>
                   <DialogTitle>{editingQuestion ? 'Edit' : 'Add New'} Form Question for {selectedTeam}</DialogTitle>
                   <DialogDescription>
-                    This will {editingQuestion ? 'modify an entry in' : 'add a new row to'} Sheet5 in your Google Sheet.
+                    This will {editingQuestion ? 'modify an entry in' : 'add a new row to'} the 'FormQuestions' sheet in your Google Sheet.
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleFormSubmit}>
@@ -247,7 +247,7 @@ export default function AdminPage() {
           <CardHeader>
             <CardTitle>Questions for {selectedTeam || "..."}</CardTitle>
             <CardDescription>
-                These questions are managed in Sheet5 of your Google Sheet.
+                These questions are managed in the 'FormQuestions' sheet of your Google Sheet.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -291,7 +291,7 @@ export default function AdminPage() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the question from Sheet5.
+                                    This action cannot be undone. This will permanently delete the question from the 'FormQuestions' sheet.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -316,3 +316,5 @@ export default function AdminPage() {
     </>
   );
 }
+
+    
