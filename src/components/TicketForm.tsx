@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useForm, type UseFormReturn, Controller } from 'react-hook-form';
+import { useForm, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -39,12 +39,14 @@ const FormFieldBuilder = ({ question, form, team }: { question: FormQuestion, fo
                 .catch(err => console.error(`Failed to fetch options for ${sheetName}:`, err));
         }
     }, [question.questionType, label]);
+    
+    let fieldComponent;
 
     switch (question.questionType) {
         case 'Text':
         case 'Url':
         case 'Date':
-            return (
+            fieldComponent = (
                 <FormField
                     control={form.control}
                     name={question.questionText}
@@ -63,8 +65,9 @@ const FormFieldBuilder = ({ question, form, team }: { question: FormQuestion, fo
                     )}
                 />
             );
+            break;
         case 'Textarea':
-            return (
+             fieldComponent = (
                 <FormField
                     control={form.control}
                     name={question.questionText}
@@ -79,8 +82,9 @@ const FormFieldBuilder = ({ question, form, team }: { question: FormQuestion, fo
                     )}
                 />
             );
+            break;
         case 'Select':
-            return (
+            fieldComponent = (
                 <FormField
                     control={form.control}
                     name={question.questionText}
@@ -102,8 +106,9 @@ const FormFieldBuilder = ({ question, form, team }: { question: FormQuestion, fo
                     )}
                 />
             );
+            break;
         case 'Checkbox':
-            return (
+            fieldComponent = (
                 <FormField
                     control={form.control}
                     name={question.questionText}
@@ -137,12 +142,14 @@ const FormFieldBuilder = ({ question, form, team }: { question: FormQuestion, fo
                     )}
                 />
             );
+            break;
         default:
-            return null;
+            fieldComponent = null;
     }
+    return fieldComponent;
 };
 
-export function TicketForm({ team, workType }: { team: string; workType: string; }) {
+export function TicketForm({ teams, workType }: { teams: string[]; workType: string; }) {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formQuestions, setFormQuestions] = useState<FormQuestion[]>([]);
@@ -175,17 +182,36 @@ export function TicketForm({ team, workType }: { team: string; workType: string;
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            Team: team,
+            Team: teams.join(', '),
             'Work Type': workType,
         },
     });
-
+    
     useEffect(() => {
-        if (!team) return;
+        if (!teams || teams.length === 0) {
+            setFormQuestions([]);
+            setIsLoading(false);
+            return;
+        };
+        
         setIsLoading(true);
-        getFormQuestions(team).then(questions => {
-            setFormQuestions(questions);
-            const defaultValues = questions.reduce((acc, q) => {
+
+        const fetchAllQuestions = async () => {
+            const allQuestions = await Promise.all(
+                teams.map(team => getFormQuestions(team))
+            );
+            const flattenedQuestions = allQuestions.flat();
+            
+            // Remove duplicates by questionText
+            const uniqueQuestions = flattenedQuestions.filter((question, index, self) =>
+                index === self.findIndex((q) => (
+                    q.questionText === question.questionText
+                ))
+            );
+
+            setFormQuestions(uniqueQuestions);
+
+            const defaultValues = uniqueQuestions.reduce((acc, q) => {
                 const questionKey = q.questionText;
                 if (q.questionType === 'Checkbox') {
                      acc[questionKey] = (q.options || []).reduce((optionsAcc, option) => {
@@ -198,15 +224,18 @@ export function TicketForm({ team, workType }: { team: string; workType: string;
                 return acc;
             }, {} as Record<string, any>);
             
-            form.reset({ Team: team, 'Work Type': workType, ...defaultValues });
+            form.reset({ Team: teams.join(', '), 'Work Type': workType, ...defaultValues });
             setIsLoading(false);
-        });
-    }, [team, workType, form]);
+        };
+        
+        fetchAllQuestions();
+    }, [teams, workType, form]);
+
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true);
 
-        const processedValues = { ...values };
+        const processedValues: Record<string, any> = { ...values, Team: teams.join(', ') };
         // Convert checkbox group data to a comma-separated string for submission
         formQuestions.forEach(q => {
             if (q.questionType === 'Checkbox' && processedValues[q.questionText]) {
@@ -232,7 +261,7 @@ export function TicketForm({ team, workType }: { team: string; workType: string;
                 }
                 return acc;
             }, {} as Record<string, any>);
-            form.reset({ Team: team, 'Work Type': workType, ...defaultQuestionValues });
+            form.reset({ Team: teams.join(', '), 'Work Type': workType, ...defaultQuestionValues });
         } else {
             toast({
                 variant: 'destructive',
@@ -244,11 +273,11 @@ export function TicketForm({ team, workType }: { team: string; workType: string;
     }
 
     if (isLoading) {
-        return <div className="flex justify-center items-center p-8"><Loader2 className="mr-2 h-8 w-8 animate-spin" /> Loading form for {team}...</div>
+        return <div className="flex justify-center items-center p-8"><Loader2 className="mr-2 h-8 w-8 animate-spin" /> Loading form...</div>
     }
 
     if (formQuestions.length === 0 && !isLoading) {
-        return <p className="text-center text-muted-foreground">No form questions have been configured for this team.</p>
+        return <p className="text-center text-muted-foreground">No form questions have been configured for the selected team(s).</p>
     }
 
     return (
@@ -257,7 +286,7 @@ export function TicketForm({ team, workType }: { team: string; workType: string;
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         {formQuestions.map(question => (
-                            <FormFieldBuilder key={question.id} question={question} form={form} team={team} />
+                            <FormFieldBuilder key={question.id} question={question} form={form} team={teams[0]} />
                         ))}
                         <Button type="submit" disabled={isSubmitting} className="w-full">
                             {isSubmitting ? (
@@ -272,5 +301,3 @@ export function TicketForm({ team, workType }: { team: string; workType: string;
         </Card>
     );
 }
-
-    
