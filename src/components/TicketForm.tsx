@@ -166,7 +166,6 @@ const FormFieldBuilder = ({ question, form }: { question: FormQuestion, form: Us
             break;
         case 'Radio':
             fieldComponent = (
-                <>
                 <FormField
                     control={form.control}
                     name={question.questionText}
@@ -176,41 +175,58 @@ const FormFieldBuilder = ({ question, form }: { question: FormQuestion, form: Us
                             <FormControl>
                                 <RadioGroup
                                     onValueChange={field.onChange}
-                                    defaultValue={field.value}
+                                    value={field.value}
                                     className="flex flex-col space-y-1"
                                 >
-                                    {question.options?.map((option) => (
-                                        <FormItem key={option} className="flex items-center space-x-3 space-y-0">
-                                            <FormControl>
-                                                <RadioGroupItem value={option} />
-                                            </FormControl>
-                                            <FormLabel className="font-normal">
-                                                {option}
-                                            </FormLabel>
-                                        </FormItem>
-                                    ))}
+                                    {question.options?.map((option) => {
+                                        // Render "Other" option with inline text input
+                                        if (option === 'Other') {
+                                            return (
+                                                <div key={option} className="flex items-center space-x-3">
+                                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                                        <FormControl>
+                                                            <RadioGroupItem value={option} />
+                                                        </FormControl>
+                                                        <FormLabel className="font-normal">
+                                                            Other:
+                                                        </FormLabel>
+                                                    </FormItem>
+                                                    {selectValue === 'Other' && (
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={otherFieldName}
+                                                            render={({ field: otherField }) => (
+                                                                <FormControl>
+                                                                    <Input 
+                                                                        className="h-9 flex-1" 
+                                                                        placeholder="Please specify" 
+                                                                        {...otherField} 
+                                                                    />
+                                                                </FormControl>
+                                                            )}
+                                                        />
+                                                    )}
+                                                </div>
+                                            );
+                                        }
+                                        // Render regular radio options
+                                        return (
+                                            <FormItem key={option} className="flex items-center space-x-3 space-y-0">
+                                                <FormControl>
+                                                    <RadioGroupItem value={option} />
+                                                </FormControl>
+                                                <FormLabel className="font-normal">
+                                                    {option}
+                                                </FormLabel>
+                                            </FormItem>
+                                        );
+                                    })}
                                 </RadioGroup>
                             </FormControl>
                             <FormMessage />
                         </FormItem>
                     )}
                 />
-                {/* Show text input when "Other" is selected */}
-                {selectValue === 'Other' && (
-                     <FormField
-                        control={form.control}
-                        name={otherFieldName}
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormControl>
-                                    <Input placeholder="Please specify" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                )}
-                </>
             );
             break;
         case 'Checkbox':
