@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, CalendarIcon } from 'lucide-react';
 import type { FormQuestion } from '@/lib/mock-data';
 import { Checkbox } from './ui/checkbox';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { cn } from '@/lib/utils';
@@ -23,7 +24,7 @@ import { format } from 'date-fns';
 // Component to render the correct form field based on question type
 const FormFieldBuilder = ({ question, form }: { question: FormQuestion, form: UseFormReturn<any> }) => {
     const isRequired = question.questionText.endsWith('*');
-    const label = question.questionText.replace(/\*$/, '').replace(/\s\((select:|checkbox:).*?\)/i, '');
+    const label = question.questionText.replace(/\*$/, '').replace(/\s\((select:|checkbox:|radio:).*?\)/i, '');
     
     const otherFieldName = `${question.questionText}_other`;
 
@@ -163,6 +164,55 @@ const FormFieldBuilder = ({ question, form }: { question: FormQuestion, form: Us
                 </>
             );
             break;
+        case 'Radio':
+            fieldComponent = (
+                <>
+                <FormField
+                    control={form.control}
+                    name={question.questionText}
+                    render={({ field }) => (
+                        <FormItem className="space-y-3">
+                            <FormLabel>{label}{isRequired && ' *'}</FormLabel>
+                            <FormControl>
+                                <RadioGroup
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    className="flex flex-col space-y-1"
+                                >
+                                    {question.options?.map((option) => (
+                                        <FormItem key={option} className="flex items-center space-x-3 space-y-0">
+                                            <FormControl>
+                                                <RadioGroupItem value={option} />
+                                            </FormControl>
+                                            <FormLabel className="font-normal">
+                                                {option}
+                                            </FormLabel>
+                                        </FormItem>
+                                    ))}
+                                </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                {/* Show text input when "Other" is selected */}
+                {selectValue === 'Other' && (
+                     <FormField
+                        control={form.control}
+                        name={otherFieldName}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormControl>
+                                    <Input placeholder="Please specify" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
+                </>
+            );
+            break;
         case 'Checkbox':
             fieldComponent = (
                  <FormItem>
@@ -192,40 +242,38 @@ const FormFieldBuilder = ({ question, form }: { question: FormQuestion, form: Us
                        )}
                      />
                    )})}
-                   {/* Render "Other" option with text input */}
+                   {/* Render "Other" option with inline text input */}
                     {question.options?.includes('Other') && (
-                        <div className="mt-2">
-                            <FormField
-                                key="Other"
-                                control={form.control}
-                                name={`${question.questionText}.Other`}
-                                render={({ field }) => (
-                                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                                    <FormControl>
-                                        <Checkbox
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                        />
-                                    </FormControl>
-                                    <FormLabel className="font-normal">
-                                        Other:
-                                    </FormLabel>
-                                     {/* Show text input when "Other" checkbox is checked */}
-                                     {otherCheckboxValue && (
-                                        <FormField
-                                            control={form.control}
-                                            name={otherFieldName}
-                                            render={({ field: otherField }) => (
-                                                <FormControl>
-                                                    <Input className="h-8" placeholder="Please specify" {...otherField} />
-                                                </FormControl>
-                                            )}
-                                        />
-                                     )}
-                                </FormItem>
-                                )}
-                            />
-                        </div>
+                        <FormField
+                            key="Other"
+                            control={form.control}
+                            name={`${question.questionText}.Other`}
+                            render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 mt-2">
+                                <FormControl>
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                    Other:
+                                </FormLabel>
+                                 {/* Show text input when "Other" checkbox is checked */}
+                                 {otherCheckboxValue && (
+                                    <FormField
+                                        control={form.control}
+                                        name={otherFieldName}
+                                        render={({ field: otherField }) => (
+                                            <FormControl>
+                                                <Input className="h-8 flex-1" placeholder="Please specify" {...otherField} />
+                                            </FormControl>
+                                        )}
+                                    />
+                                 )}
+                            </FormItem>
+                            )}
+                        />
                     )}
                    <FormMessage />
                  </FormItem>
@@ -283,13 +331,13 @@ const generateFormSchemaAndDefaults = (questions: FormQuestion[], teams: string[
                 ? z.date({ required_error: "A date is required."}) 
                 : z.date().optional().nullable();
             defaultValues[questionKey] = null;
-        } else if (q.questionType === 'Select') {
+        } else if (q.questionType === 'Select' || q.questionType === 'Radio') {
             schemaDefinition[questionKey] = isRequired 
                 ? z.string().min(1, 'This field is required.') 
                 : z.string().optional();
             defaultValues[questionKey] = '';
 
-            // Add "Other" text field for select if "Other" option exists
+            // Add "Other" text field for select/radio if "Other" option exists
             if (q.options?.includes('Other')) {
                 const otherFieldName = `${questionKey}_other`;
                 schemaDefinition[otherFieldName] = z.string().optional();
@@ -308,8 +356,8 @@ const generateFormSchemaAndDefaults = (questions: FormQuestion[], teams: string[
         questions.forEach(q => {
              if (q.options?.includes('Other')) {
                 const otherFieldName = `${q.questionText}_other`;
-                // For Select fields: validate if "Other" is selected
-                if (q.questionType === 'Select') {
+                // For Select and Radio fields: validate if "Other" is selected
+                if (q.questionType === 'Select' || q.questionType === 'Radio') {
                      if (data[q.questionText] === 'Other' && !data[otherFieldName]) {
                         ctx.addIssue({
                             code: z.ZodIssueCode.custom,
@@ -361,8 +409,8 @@ function ActualForm({ formSchema, defaultValues, formQuestions }: {
             const otherFieldName = `${q.questionText}_other`;
             const otherValue = processedValues[otherFieldName];
 
-            // Process Select "Other" option
-            if (q.questionType === 'Select' && value === 'Other') {
+            // Process Select and Radio "Other" option
+            if ((q.questionType === 'Select' || q.questionType === 'Radio') && value === 'Other') {
                 processedValues[q.questionText] = `Other: ${otherValue}`;
             }
 
@@ -485,7 +533,7 @@ export function TicketForm({ teams, workType }: { teams: string[]; workType: str
          if (teams.length > 0) {
             return <p className="text-center text-muted-foreground">No form questions have been configured for the selected team(s).</p>
          }
-         return null; // Don't render anything if no teams are selected
+         return null;
     }
     
     if (formConfig) {
