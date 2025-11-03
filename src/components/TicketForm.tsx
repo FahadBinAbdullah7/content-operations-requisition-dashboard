@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useForm, type UseFormReturn, useWatch } from 'react-hook-form';
+import { useForm, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -15,32 +16,18 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, CalendarIcon } from 'lucide-react';
 import type { FormQuestion } from '@/lib/mock-data';
 import { Checkbox } from './ui/checkbox';
-import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 // Component to render the correct form field based on question type
-const FormFieldBuilder = ({ question, form }: { question: FormQuestion, form: UseFormReturn<any> }) => {
+const FormFieldBuilder = ({ question, form, team }: { question: FormQuestion, form: UseFormReturn<any>, team: string }) => {
     const isRequired = question.questionText.endsWith('*');
-    const label = question.questionText.replace(/\*$/, '').replace(/\s\((select:|checkbox:|radio:).*?\)/i, '');
+    const label = question.questionText.replace(/\*$/, '').replace(/\s\((select:|checkbox:).*?\)/i, '');
     
-    const otherFieldName = `${question.questionText}_other`;
-
-    // Use useWatch to get the value of the field for conditional rendering
-    const selectValue = useWatch({
-        control: form.control,
-        name: question.questionText,
-    });
-    
-    const otherCheckboxValue = useWatch({
-        control: form.control,
-        name: `${question.questionText}.Other`
-    });
-
     let fieldComponent;
-    
+
     switch (question.questionType) {
         case 'Text':
         case 'Url':
@@ -55,7 +42,7 @@ const FormFieldBuilder = ({ question, form }: { question: FormQuestion, form: Us
                                 <Input 
                                   placeholder={`Enter ${label.toLowerCase()}`} 
                                   type={question.questionType === 'Url' ? 'url' : 'text'}
-                                  {...field}
+                                  {...field} 
                                 />
                             </FormControl>
                             <FormMessage />
@@ -96,6 +83,9 @@ const FormFieldBuilder = ({ question, form }: { question: FormQuestion, form: Us
                                         mode="single"
                                         selected={field.value}
                                         onSelect={field.onChange}
+                                        disabled={(date) =>
+                                            date > new Date() || date < new Date("1900-01-01")
+                                        }
                                         initialFocus
                                     />
                                 </PopoverContent>
@@ -125,7 +115,6 @@ const FormFieldBuilder = ({ question, form }: { question: FormQuestion, form: Us
             break;
         case 'Select':
             fieldComponent = (
-                <>
                 <FormField
                     control={form.control}
                     name={question.questionText}
@@ -146,153 +135,42 @@ const FormFieldBuilder = ({ question, form }: { question: FormQuestion, form: Us
                         </FormItem>
                     )}
                 />
-                {/* Show text input when "Other" is selected */}
-                {selectValue === 'Other' && (
-                     <FormField
-                        control={form.control}
-                        name={otherFieldName}
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormControl>
-                                    <Input placeholder="Please specify" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                )}
-                </>
-            );
-            break;
-        case 'Radio':
-            fieldComponent = (
-                <FormField
-                    control={form.control}
-                    name={question.questionText}
-                    render={({ field }) => (
-                        <FormItem className="space-y-3">
-                            <FormLabel>{label}{isRequired && ' *'}</FormLabel>
-                            <FormControl>
-                                <RadioGroup
-                                    onValueChange={field.onChange}
-                                    value={field.value}
-                                    className="flex flex-col space-y-1"
-                                >
-                                    {question.options?.map((option) => {
-                                        // Render "Other" option with inline text input
-                                        if (option === 'Other') {
-                                            return (
-                                                <div key={option} className="flex items-center space-x-3">
-                                                    <FormItem className="flex items-center space-x-3 space-y-0">
-                                                        <FormControl>
-                                                            <RadioGroupItem value={option} />
-                                                        </FormControl>
-                                                        <FormLabel className="font-normal">
-                                                            Other:
-                                                        </FormLabel>
-                                                    </FormItem>
-                                                    {selectValue === 'Other' && (
-                                                        <FormField
-                                                            control={form.control}
-                                                            name={otherFieldName}
-                                                            render={({ field: otherField }) => (
-                                                                <FormControl>
-                                                                    <Input 
-                                                                        className="h-9 flex-1" 
-                                                                        placeholder="Please specify" 
-                                                                        {...otherField} 
-                                                                    />
-                                                                </FormControl>
-                                                            )}
-                                                        />
-                                                    )}
-                                                </div>
-                                            );
-                                        }
-                                        // Render regular radio options
-                                        return (
-                                            <FormItem key={option} className="flex items-center space-x-3 space-y-0">
-                                                <FormControl>
-                                                    <RadioGroupItem value={option} />
-                                                </FormControl>
-                                                <FormLabel className="font-normal">
-                                                    {option}
-                                                </FormLabel>
-                                            </FormItem>
-                                        );
-                                    })}
-                                </RadioGroup>
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
             );
             break;
         case 'Checkbox':
             fieldComponent = (
-                 <FormItem>
-                   <div className="mb-4">
-                    <FormLabel>{label}{isRequired && ' *'}</FormLabel>
-                   </div>
-                   {/* Render all options except "Other" */}
-                   {question.options?.map((option) => {
-                    if (option === 'Other') return null; // Render 'Other' separately
-                    return (
-                     <FormField
-                       key={option}
-                       control={form.control}
-                       name={`${question.questionText}.${option}`}
-                       render={({ field }) => (
-                         <FormItem className="flex flex-row items-start space-x-3 space-y-0 mb-2">
-                           <FormControl>
-                             <Checkbox
-                               checked={field.value}
-                               onCheckedChange={field.onChange}
+                <FormField
+                    control={form.control}
+                    name={question.questionText}
+                    render={() => (
+                         <FormItem>
+                           <div className="mb-4">
+                            <FormLabel>{label}{isRequired && ' *'}</FormLabel>
+                           </div>
+                           {question.options?.map((option) => (
+                             <FormField
+                               key={option}
+                               control={form.control}
+                               name={`${question.questionText}.${option}`}
+                               render={({ field }) => (
+                                 <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                   <FormControl>
+                                     <Checkbox
+                                       checked={field.value}
+                                       onCheckedChange={field.onChange}
+                                     />
+                                   </FormControl>
+                                   <FormLabel className="font-normal">
+                                     {option}
+                                   </FormLabel>
+                                 </FormItem>
+                               )}
                              />
-                           </FormControl>
-                           <FormLabel className="font-normal">
-                             {option}
-                           </FormLabel>
+                           ))}
+                           <FormMessage />
                          </FormItem>
-                       )}
-                     />
-                   )})}
-                   {/* Render "Other" option with inline text input */}
-                    {question.options?.includes('Other') && (
-                        <FormField
-                            key="Other"
-                            control={form.control}
-                            name={`${question.questionText}.Other`}
-                            render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 mt-2">
-                                <FormControl>
-                                    <Checkbox
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                    />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                    Other:
-                                </FormLabel>
-                                 {/* Show text input when "Other" checkbox is checked */}
-                                 {otherCheckboxValue && (
-                                    <FormField
-                                        control={form.control}
-                                        name={otherFieldName}
-                                        render={({ field: otherField }) => (
-                                            <FormControl>
-                                                <Input className="h-8 flex-1" placeholder="Please specify" {...otherField} />
-                                            </FormControl>
-                                        )}
-                                    />
-                                 )}
-                            </FormItem>
-                            )}
-                        />
                     )}
-                   <FormMessage />
-                 </FormItem>
+                />
             );
             break;
         default:
@@ -301,153 +179,105 @@ const FormFieldBuilder = ({ question, form }: { question: FormQuestion, form: Us
     return fieldComponent;
 };
 
-// Function to generate the Zod schema and default values dynamically
-const generateFormSchemaAndDefaults = (questions: FormQuestion[], teams: string[], workType: string) => {
-    const schemaDefinition: Record<string, any> = {
-        'Team': z.string(),
-        'Work Type': z.string(),
-    };
-
-    const defaultValues: Record<string, any> = {
-        'Team': teams.join(', '),
-        'Work Type': workType,
-    };
-
-    questions.forEach(q => {
-        const isRequired = q.questionText.endsWith('*');
-        const questionKey = q.questionText;
-
-        if (q.questionType === 'Checkbox') {
-            const checkboxOptions = q.options || [];
-            const checkboxSchemaObject = checkboxOptions.reduce((acc, option) => {
-                    acc[option] = z.boolean().default(false);
-                    return acc;
-                }, {} as Record<string, z.ZodBoolean>);
-
-            const checkboxSchema = z.object(checkboxSchemaObject);
-            
-            schemaDefinition[questionKey] = isRequired 
-                ? checkboxSchema.refine(data => Object.values(data).some(v => v), { message: "At least one option must be selected." }) 
-                : checkboxSchema;
-
-            defaultValues[questionKey] = checkboxOptions.reduce((acc, option) => {
-                acc[option] = false;
-                return acc;
-            }, {} as Record<string, boolean>);
-            
-            // Add "Other" text field for checkbox if "Other" option exists
-            if (checkboxOptions.includes('Other')) {
-                const otherFieldName = `${questionKey}_other`;
-                schemaDefinition[otherFieldName] = z.string().optional();
-                defaultValues[otherFieldName] = '';
-            }
-
-        } else if (q.questionType === 'Date') {
-            schemaDefinition[questionKey] = isRequired 
-                ? z.date({ required_error: "A date is required."}) 
-                : z.date().optional().nullable();
-            defaultValues[questionKey] = null;
-        } else if (q.questionType === 'Select' || q.questionType === 'Radio') {
-            schemaDefinition[questionKey] = isRequired 
-                ? z.string().min(1, 'This field is required.') 
-                : z.string().optional();
-            defaultValues[questionKey] = '';
-
-            // Add "Other" text field for select/radio if "Other" option exists
-            if (q.options?.includes('Other')) {
-                const otherFieldName = `${questionKey}_other`;
-                schemaDefinition[otherFieldName] = z.string().optional();
-                defaultValues[otherFieldName] = '';
-            }
-        } else {
-            schemaDefinition[questionKey] = isRequired 
-                ? z.string().min(1, 'This field is required.') 
-                : z.string().optional();
-            defaultValues[questionKey] = '';
-        }
-    });
-    
-    // Add validation refinements for 'Other' fields
-    const finalSchema = z.object(schemaDefinition).superRefine((data, ctx) => {
-        questions.forEach(q => {
-             if (q.options?.includes('Other')) {
-                const otherFieldName = `${q.questionText}_other`;
-                // For Select and Radio fields: validate if "Other" is selected
-                if (q.questionType === 'Select' || q.questionType === 'Radio') {
-                     if (data[q.questionText] === 'Other' && !data[otherFieldName]) {
-                        ctx.addIssue({
-                            code: z.ZodIssueCode.custom,
-                            path: [otherFieldName],
-                            message: "Please specify the 'Other' value.",
-                        });
-                    }
-                } 
-                // For Checkbox fields: validate if "Other" is checked
-                else if (q.questionType === 'Checkbox') {
-                    if (data[q.questionText]?.['Other'] && !data[otherFieldName]) {
-                        ctx.addIssue({
-                            code: z.ZodIssueCode.custom,
-                            path: [otherFieldName],
-                            message: "Please specify the 'Other' value.",
-                        });
-                    }
-                }
-             }
-        });
-    });
-
-    return {
-        schema: finalSchema,
-        defaultValues,
-    };
-};
-
-function ActualForm({ formSchema, defaultValues, formQuestions }: {
-    formSchema: z.ZodObject<any, any, any>,
-    defaultValues: Record<string, any>,
-    formQuestions: FormQuestion[],
-}) {
+export function TicketForm({ teams, workType }: { teams: string[]; workType: string; }) {
+    const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [formQuestions, setFormQuestions] = useState<FormQuestion[]>([]);
     const { toast } = useToast();
     
+    // Dynamically generate the form schema from questions
+    const formSchema = z.object({
+        Team: z.string(),
+        'Work Type': z.string(),
+        ...formQuestions.reduce((schema, q) => {
+            const isRequired = q.questionText.endsWith('*');
+            const questionKey = q.questionText;
+
+            if (q.questionType === 'Checkbox') {
+                const checkboxGroupSchema = z.object(
+                  (q.options || []).reduce((acc, option) => {
+                    acc[option] = z.boolean().default(false);
+                    return acc;
+                  }, {} as Record<string, z.ZodBoolean>)
+                );
+                schema[questionKey] = isRequired ? checkboxGroupSchema.refine(data => Object.values(data).some(v => v), { message: "At least one option must be selected."}) : checkboxGroupSchema;
+            } else if (q.questionType === 'Date') {
+                 schema[questionKey] = isRequired ? z.date({ required_error: "A date is required."}) : z.date().optional();
+            } else {
+                 schema[questionKey] = isRequired ? z.string().min(1, 'This field is required.') : z.string().optional();
+            }
+            return schema;
+        }, {} as Record<string, any>)
+    });
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
-        defaultValues: defaultValues,
+        defaultValues: {
+            Team: teams.join(', '),
+            'Work Type': workType,
+        },
     });
+    
+    useEffect(() => {
+        if (!teams || teams.length === 0) {
+            setFormQuestions([]);
+            setIsLoading(false);
+            return;
+        };
+        
+        setIsLoading(true);
+
+        const fetchAllQuestions = async () => {
+            const allQuestions = await Promise.all(
+                teams.map(team => getFormQuestions(team))
+            );
+            const flattenedQuestions = allQuestions.flat();
+            
+            // Remove duplicates by questionText
+            const uniqueQuestions = flattenedQuestions.filter((question, index, self) =>
+                index === self.findIndex((q) => (
+                    q.questionText === question.questionText
+                ))
+            );
+
+            setFormQuestions(uniqueQuestions);
+
+            const defaultValues = uniqueQuestions.reduce((acc, q) => {
+                const questionKey = q.questionText;
+                if (q.questionType === 'Checkbox') {
+                     acc[questionKey] = (q.options || []).reduce((optionsAcc, option) => {
+                        optionsAcc[option] = false;
+                        return optionsAcc;
+                    }, {} as Record<string, boolean>);
+                } else if (q.questionType !== 'Date') {
+                    acc[questionKey] = '';
+                }
+                return acc;
+            }, {} as Record<string, any>);
+            
+            form.reset({ Team: teams.join(', '), 'Work Type': workType, ...defaultValues });
+            setIsLoading(false);
+        };
+        
+        fetchAllQuestions();
+    }, [teams, workType]);
+
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true);
 
-        const processedValues: Record<string, any> = { ...values };
+        const processedValues: Record<string, any> = { ...values, Team: teams.join(', ') };
         
         formQuestions.forEach(q => {
             const value = processedValues[q.questionText];
-            const otherFieldName = `${q.questionText}_other`;
-            const otherValue = processedValues[otherFieldName];
-
-            // Process Select and Radio "Other" option
-            if ((q.questionType === 'Select' || q.questionType === 'Radio') && value === 'Other') {
-                processedValues[q.questionText] = `Other: ${otherValue}`;
-            }
-
-            // Process Checkbox "Other" option
+            // Convert checkbox group data to a comma-separated string for submission
             if (q.questionType === 'Checkbox' && value) {
-                const selectedOptions = Object.entries(value)
+                processedValues[q.questionText] = Object.entries(value)
                     .filter(([, checked]) => checked)
-                    .map(([option]) => {
-                        if (option === 'Other') {
-                            return `Other: ${otherValue}`;
-                        }
-                        return option;
-                    })
+                    .map(([option]) => option)
                     .join(', ');
-                processedValues[q.questionText] = selectedOptions;
             }
-
-            // Clean up the separate "other" field
-            delete processedValues[otherFieldName];
-
-            // Format date for submission
+            // Format date objects to a string
             if (q.questionType === 'Date' && value instanceof Date) {
                  processedValues[q.questionText] = format(value, 'yyyy-MM-dd');
             }
@@ -460,7 +290,17 @@ function ActualForm({ formSchema, defaultValues, formQuestions }: {
                 title: 'Ticket Submitted!',
                 description: 'Your ticket has been submitted successfully.',
             });
-            form.reset(defaultValues);
+            const defaultQuestionValues = formQuestions.reduce((acc, q) => {
+                if (q.questionType === 'Checkbox') {
+                    acc[q.questionText] = {};
+                } else if (q.questionType !== 'Date') {
+                    acc[q.questionText] = '';
+                } else {
+                    acc[q.questionText] = undefined;
+                }
+                return acc;
+            }, {} as Record<string, any>);
+            form.reset({ Team: teams.join(', '), 'Work Type': workType, ...defaultQuestionValues });
         } else {
             toast({
                 variant: 'destructive',
@@ -470,14 +310,22 @@ function ActualForm({ formSchema, defaultValues, formQuestions }: {
         }
         setIsSubmitting(false);
     }
-    
+
+    if (isLoading) {
+        return <div className="flex justify-center items-center p-8"><Loader2 className="mr-2 h-8 w-8 animate-spin" /> Loading form...</div>
+    }
+
+    if (formQuestions.length === 0 && !isLoading) {
+        return <p className="text-center text-muted-foreground">No form questions have been configured for the selected team(s).</p>
+    }
+
     return (
         <Card>
             <CardContent className="p-6">
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         {formQuestions.map(question => (
-                            <FormFieldBuilder key={question.id} question={question} form={form} />
+                            <FormFieldBuilder key={question.id} question={question} form={form} team={teams[0]} />
                         ))}
                         <Button type="submit" disabled={isSubmitting} className="w-full">
                             {isSubmitting ? (
@@ -491,70 +339,4 @@ function ActualForm({ formSchema, defaultValues, formQuestions }: {
             </CardContent>
         </Card>
     );
-}
-
-export function TicketForm({ teams, workType }: { teams: string[]; workType: string; }) {
-    const [isLoading, setIsLoading] = useState(true);
-    const [formConfig, setFormConfig] = useState<{
-        formSchema: z.ZodObject<any, any, any>,
-        defaultValues: Record<string, any>,
-        formQuestions: FormQuestion[],
-    } | null>(null);
-
-    const { toast } = useToast();
-    
-    useEffect(() => {
-        const fetchAndBuildConfig = async () => {
-            if (!teams || teams.length === 0) {
-                setFormConfig(null);
-                setIsLoading(false);
-                return;
-            };
-            
-            setIsLoading(true);
-
-            try {
-                const allQuestionsPromises = teams.map(team => getFormQuestions(team));
-                const allQuestions = await Promise.all(allQuestionsPromises);
-                const flattenedQuestions = allQuestions.flat();
-                
-                const uniqueQuestions = flattenedQuestions.filter((question, index, self) =>
-                    index === self.findIndex((q) => q.questionText === question.questionText)
-                );
-    
-                const { schema, defaultValues } = generateFormSchemaAndDefaults(uniqueQuestions, teams, workType);
-                
-                setFormConfig({
-                    formSchema: schema,
-                    defaultValues,
-                    formQuestions: uniqueQuestions
-                });
-
-            } catch (error) {
-                console.error("Failed to fetch form questions:", error);
-                toast({ variant: "destructive", title: "Error", description: "Could not load form questions." });
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        
-        fetchAndBuildConfig();
-    }, [teams, workType, toast]); 
-
-    if (isLoading) {
-        return <div className="flex justify-center items-center p-8"><Loader2 className="mr-2 h-8 w-8 animate-spin" /> Loading form...</div>
-    }
-
-    if (!formConfig && !isLoading) {
-         if (teams.length > 0) {
-            return <p className="text-center text-muted-foreground">No form questions have been configured for the selected team(s).</p>
-         }
-         return null;
-    }
-    
-    if (formConfig) {
-        return <ActualForm key={teams.join('-')} {...formConfig} />;
-    }
-
-    return null;
 }
